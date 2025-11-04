@@ -1,0 +1,13 @@
+@model ReserHotel.Models.DTOs.HabitacionDto
+@{
+ ViewData["Title"] = "Eliminar Habitación";
+}
+<div class="container mt-4">
+ <h2>Eliminar Habitación</h2>
+ <div class="alert alert-warning">¿Confirma eliminar la habitación @Model.Numero?</div>
+ <form asp-action="Delete" method="post">
+ <input type="hidden" asp-for="Id" />
+ <button type="submit" class="btn btn-danger">Eliminar</button>
+ <a class="btn btn-secondary" href="@Url.Action("Index")">Cancelar</a>
+ </form>
+</div>

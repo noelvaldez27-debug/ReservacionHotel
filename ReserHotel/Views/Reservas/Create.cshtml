@@ -1,0 +1,95 @@
+@model ReserHotel.Models.ViewModels.ReservaCreateViewModel
+@using HotelSystem.Domain.Entities
+@{
+ ViewData["Title"] = "Crear Reserva";
+}
+<div class="container mt-4">
+ <h2> crear reserva </h2>
+ @if (TempData["Error"] != null){<div class="alert alert-danger">@TempData["Error"]</div>}
+ <form asp-action="Create" method="post" class="row g-3">
+ <div class="col-12"><h5>datos del huésped</h5></div>
+ <div class="col-md-3">
+ <label asp-for="Documento" class="form-label"></label>
+ <input asp-for="Documento" class="form-control" />
+ <span asp-validation-for="Documento" class="text-danger"></span>
+ </div>
+ <div class="col-md-5">
+ <label asp-for="NombreCompleto" class="form-label"></label>
+ <input asp-for="NombreCompleto" class="form-control" />
+ <span asp-validation-for="NombreCompleto" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="Email" class="form-label"></label>
+ <input asp-for="Email" class="form-control" />
+ <span asp-validation-for="Email" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="Telefono" class="form-label"></label>
+ <input asp-for="Telefono" class="form-control" />
+ <span asp-validation-for="Telefono" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="Pais" class="form-label"></label>
+ <input asp-for="Pais" class="form-control" />
+ <span asp-validation-for="Pais" class="text-danger"></span>
+ </div>
+
+ <div class="col-12"><h5>datos de la reserva</h5></div>
+ <div class="col-md-3">
+ <label asp-for="FechaEntrada" class="form-label"></label>
+ <input asp-for="FechaEntrada" class="form-control" type="date" />
+ <span asp-validation-for="FechaEntrada" class="text-danger"></span>
+ </div>
+ <div class="col-md-3">
+ <label asp-for="FechaSalida" class="form-label"></label>
+ <input asp-for="FechaSalida" class="form-control" type="date" />
+ <span asp-validation-for="FechaSalida" class="text-danger"></span>
+ </div>
+ <div class="col-md-6">
+ <label asp-for="HabitacionId" class="form-label">habitación</label>
+ <select asp-for="HabitacionId" class="form-select" asp-items="@(new SelectList(Model.Habitaciones, "Id", "Numero"))"></select>
+ <span asp-validation-for="HabitacionId" class="text-danger"></span>
+ </div>
+
+ <div class="col-12"><h5>servicios adicionales</h5></div>
+ <div class="col-md-3 form-check">
+ <input class="form-check-input" asp-for="Desayuno" />
+ <label class="form-check-label" asp-for="Desayuno">desayuno</label>
+ </div>
+ <div class="col-md-3 form-check">
+ <input class="form-check-input" asp-for="Spa" />
+ <label class="form-check-label" asp-for="Spa">spa</label>
+ </div>
+ <div class="col-md-3 form-check">
+ <input class="form-check-input" asp-for="Estacionamiento" />
+ <label class="form-check-label" asp-for="Estacionamiento">estacionamiento</label>
+ </div>
+ <div class="col-md-3 form-check">
+ <input class="form-check-input" asp-for="LateCheckout" />
+ <label class="form-check-label" asp-for="LateCheckout">late checkout</label>
+ </div>
+
+ <div class="col-12"><h5>resumen</h5></div>
+ <div class="col-md-8">
+ <partial name="_ReservaResumen" model="Model" />
+ <div class="form-check mt-2">
+ <input class="form-check-input" type="checkbox" id="terms" required />
+ <label class="form-check-label" for="terms">
+ Acepto los términos y condiciones.
+ </label>
+ </div>
+ <partial name="_PoliticaCancelacion" />
+ </div>
+ <div class="col-md-4">
+ <div class="border rounded p-3 bg-light">
+ <partial name="_ServiciosAdicionales" model="Model" />
+ </div>
+ </div>
+
+ <div class="col-12">
+ <button type="submit" class="btn btn-success">pagar y confirmar</button>
+ <a class="btn btn-secondary" href="@Url.Action("Search")">volver</a>
+ </div>
+ </form>
+</div>
+@section Scripts{<partial name="_ValidationScriptsPartial" />}

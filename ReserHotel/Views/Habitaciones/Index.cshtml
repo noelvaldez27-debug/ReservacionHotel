@@ -1,0 +1,87 @@
+@using HotelSystem.Domain.Entities
+@using X.PagedList.Mvc.Core
+@model X.PagedList.IPagedList<Habitacion>
+@{
+ ViewData["Title"] = "Habitaciones";
+ var tipoSel = Context?.Request?.Query["tipo"].ToString();
+ var pisoSel = Context?.Request?.Query["piso"].ToString();
+}
+<div class="container mt-4">
+ <h2>Habitaciones</h2>
+ <div class="row mb-3">
+ <div class="col-md-12">
+ <form method="get" class="row g-2">
+ <div class="col-sm-3">
+ <select name="tipo" class="form-select">
+ <option value="">Tipo (todos)</option>
+ @foreach (var t in Enum.GetValues(typeof(TipoHabitacion)))
+ {
+ var val = ((int)t).ToString();
+ <option value="@val" selected="@(tipoSel == val)">@t</option>
+ }
+ </select>
+ </div>
+ <div class="col-sm-3">
+ <input class="form-control" type="number" name="piso" placeholder="Piso" value="@pisoSel" />
+ </div>
+ <div class="col-sm-6 text-end">
+ <a class="btn btn-primary" href="@Url.Action("Create")">Nueva habitación</a>
+ <button class="btn btn-secondary" type="submit">Filtrar</button>
+ </div>
+ </form>
+ </div>
+ </div>
+
+ @if (TempData["Success"] != null)
+ {
+ <div class="alert alert-success">@TempData["Success"]</div>
+ }
+ @if (TempData["Error"] != null)
+ {
+ <div class="alert alert-danger">@TempData["Error"]</div>
+ }
+
+ <div class="table-responsive">
+ <table class="table table-striped align-middle">
+ <thead>
+ <tr>
+ <th>Foto</th>
+ <th>Número</th>
+ <th>Piso</th>
+ <th>Tipo</th>
+ <th>Capacidad</th>
+ <th>Amenidades</th>
+ <th></th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var item in Model)
+ {
+ var img = item.Tipo switch {
+ TipoHabitacion.Simple => "/img/hab/simple1.jpg",
+ TipoHabitacion.Doble => "/img/hab/doble1.jpg",
+ TipoHabitacion.Suite => "/img/hab/suite1.jpg",
+ _ => "/img/placeholder.png"
+ };
+ <tr>
+ <td><img src="@img" alt="@item.Tipo" width="80" class="rounded"/></td>
+ <td>@item.Numero</td>
+ <td>@item.Piso</td>
+ <td>@item.Tipo</td>
+ <td>@item.Capacidad</td>
+ <td>@item.Amenidades</td>
+ <td class="text-end">
+ <a class="btn btn-sm btn-outline-info" href="@Url.Action("Details", new { id = item.Id })">Detalles</a>
+ <a class="btn btn-sm btn-outline-warning" href="@Url.Action("Edit", new { id = item.Id })">Editar</a>
+ <a class="btn btn-sm btn-outline-danger" href="@Url.Action("Delete", new { id = item.Id })">Eliminar</a>
+ </td>
+ </tr>
+ }
+ </tbody>
+ </table>
+ </div>
+
+ <div class="d-flex justify-content-center">
+ @Html.PagedListPager(Model, page => Url.Action("Index", new { page, tipo = tipoSel, piso = pisoSel }))
+ </div>
+</div>

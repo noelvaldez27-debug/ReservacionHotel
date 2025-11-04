@@ -1,0 +1,9 @@
+@model ReserHotel.Models.ViewModels.ReservaCreateViewModel
+<div>
+ <ul class="list-group">
+ @if (Model.Desayuno) { <li class="list-group-item d-flex justify-content-between"><span>Desayuno</span><span>$15</span></li> }
+ @if (Model.Spa) { <li class="list-group-item d-flex justify-content-between"><span>Spa</span><span>$50</span></li> }
+ @if (Model.Estacionamiento) { <li class="list-group-item d-flex justify-content-between"><span>Estacionamiento</span><span>$10</span></li> }
+ @if (Model.LateCheckout) { <li class="list-group-item d-flex justify-content-between"><span>Late checkout</span><span>$25</span></li> }
+ </ul>
+</div>

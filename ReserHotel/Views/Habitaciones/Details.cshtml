@@ -1,0 +1,40 @@
+@using HotelSystem.Domain.Entities
+@model Habitacion
+@{
+ ViewData["Title"] = "Detalles Habitación";
+ var gallery = (IReadOnlyList<string>)ViewBag.Gallery ?? new List<string>();
+ var cover = gallery.FirstOrDefault() ?? "/img/placeholder.png";
+}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+<div class="container mt-4">
+ <h2>Habitación @Model.Numero</h2>
+ <div class="row g-3">
+ <div class="col-md-6">
+ <a href="@cover" class="glightbox" data-gallery="hab">
+ <img src="@cover" class="img-fluid rounded mb-3" alt="@Model.Tipo" />
+ </a>
+ <div class="d-flex gap-2 flex-wrap">
+ @foreach (var img in gallery)
+ {
+ <a href="@img" class="glightbox" data-gallery="hab">
+ <img src="@img" style="width:100px;height:80px;object-fit:cover" class="rounded border" />
+ </a>
+ }
+ </div>
+ </div>
+ <div class="col-md-6">
+ <dl class="row">
+ <dt class="col-sm-4">Número</dt><dd class="col-sm-8">@Model.Numero</dd>
+ <dt class="col-sm-4">Piso</dt><dd class="col-sm-8">@Model.Piso</dd>
+ <dt class="col-sm-4">Tipo</dt><dd class="col-sm-8">@Model.Tipo</dd>
+ <dt class="col-sm-4">Capacidad</dt><dd class="col-sm-8">@Model.Capacidad</dd>
+ <dt class="col-sm-4">Amenidades</dt><dd class="col-sm-8">@Model.Amenidades</dd>
+ </dl>
+ <a class="btn btn-secondary" href="@Url.Action("Index")">Volver</a>
+ </div>
+ </div>
+</div>
+@section Scripts{
+ <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+ <script>GLightbox({ selector: '.glightbox' });</script>
+}

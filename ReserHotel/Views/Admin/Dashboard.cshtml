@@ -1,0 +1,32 @@
+@{
+ ViewData["Title"] = "Dashboard";
+}
+<div class="container mt-4">
+ <h2>Dashboard</h2>
+ <div class="row g-3">
+ <div class="col-md-4">
+ <div class="card text-bg-primary">
+ <div class="card-body">
+ <h5 class="card-title">Ocupación</h5>
+ <p class="card-text fs-3">@ViewBag.Ocupacion %</p>
+ </div>
+ </div>
+ </div>
+ <div class="col-md-4">
+ <div class="card text-bg-success">
+ <div class="card-body">
+ <h5 class="card-title">Ingresos</h5>
+ <p class="card-text fs-3">@((decimal)ViewBag.Ingresos).ToString("C")</p>
+ </div>
+ </div>
+ </div>
+ <div class="col-md-4">
+ <div class="card text-bg-warning">
+ <div class="card-body">
+ <h5 class="card-title">Reseñas promedio</h5>
+ <p class="card-text fs-3">@ViewBag.ResenasPromedio</p>
+ </div>
+ </div>
+ </div>
+ </div>
+</div>

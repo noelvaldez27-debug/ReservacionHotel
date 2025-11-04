@@ -1,0 +1,57 @@
+@{
+ ViewData["Title"] = "Mi Panel";
+ var huesped = ViewBag.Huesped as HotelSystem.Domain.Entities.Huesped;
+ var activas = ViewBag.Activas as List<HotelSystem.Domain.Entities.Reserva>;
+ var historial = ViewBag.Historial as List<HotelSystem.Domain.Entities.Reserva>;
+ var puntos = (int)(ViewBag.Puntos ??0);
+ var proximas = ViewBag.Proximas as List<HotelSystem.Domain.Entities.Reserva>;
+}
+<div class="container mt-4">
+ <h2>Mi Panel</h2>
+ <div class="row g-3">
+ <div class="col-md-4">
+ <div class="card">
+ <div class="card-body">
+ <h5 class="card-title">Bienvenido, @huesped?.NombreCompleto</h5>
+ <p class="card-text">Puntos acumulados: <strong>@puntos</strong></p>
+ </div>
+ </div>
+ </div>
+ <div class="col-md-8">
+ <div class="card">
+ <div class="card-header">Próximas reservas</div>
+ <ul class="list-group list-group-flush">
+ @foreach (var r in proximas ?? new())
+ {
+ <li class="list-group-item">@r.NumeroReserva - @r.FechaEntrada: @r.Estado</li>
+ }
+ </ul>
+ </div>
+ </div>
+ </div>
+
+ <div class="row g-3 mt-2">
+ <div class="col-md-6">
+ <div class="card">
+ <div class="card-header">Reservas activas</div>
+ <ul class="list-group list-group-flush">
+ @foreach (var r in activas ?? new())
+ {
+ <li class="list-group-item">@r.NumeroReserva - @r.FechaEntrada a @r.FechaSalida (@r.Estado)</li>
+ }
+ </ul>
+ </div>
+ </div>
+ <div class="col-md-6">
+ <div class="card">
+ <div class="card-header">Historial</div>
+ <ul class="list-group list-group-flush">
+ @foreach (var r in historial ?? new())
+ {
+ <li class="list-group-item">@r.NumeroReserva - @r.FechaEntrada a @r.FechaSalida (@r.Estado)</li>
+ }
+ </ul>
+ </div>
+ </div>
+ </div>
+</div>

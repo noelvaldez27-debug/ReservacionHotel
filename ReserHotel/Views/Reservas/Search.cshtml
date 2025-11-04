@@ -1,0 +1,121 @@
+@using HotelSystem.Domain.Entities
+@model ReserHotel.Models.ViewModels.ReservaSearchViewModel
+@{
+ ViewData["Title"] = "Buscar Disponibilidad";
+ var filtros = Model.Filtros;
+}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/%40eonasdan/tempus-dominus@6.9.7/dist/css/tempus-dominus.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+<div class="container mt-4">
+ <h2>Buscar Disponibilidad</h2>
+
+ <form method="get" class="row g-3">
+ <div class="col-md-3">
+ <label class="form-label">Entrada</label>
+ <div class="input-group" id="dtEntrada" data-td-target-input="nearest" data-td-target-toggle="nearest">
+ <input class="form-control" id="fechaEntrada" name="FechaEntrada" type="text" value="@filtros.FechaEntrada?.ToString("yyyy-MM-dd")" data-td-target="#dtEntrada" />
+ <span class="input-group-text" data-td-target="#dtEntrada" data-td-toggle="datetimepicker"><i class="bi bi-calendar"></i></span>
+ </div>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Salida</label>
+ <div class="input-group" id="dtSalida" data-td-target-input="nearest" data-td-target-toggle="nearest">
+ <input class="form-control" id="fechaSalida" name="FechaSalida" type="text" value="@filtros.FechaSalida?.ToString("yyyy-MM-dd")" data-td-target="#dtSalida" />
+ <span class="input-group-text" data-td-target="#dtSalida" data-td-toggle="datetimepicker"><i class="bi bi-calendar"></i></span>
+ </div>
+ </div>
+ <div class="col-md-2">
+ <label class="form-label">Huéspedes</label>
+ <input class="form-control" name="CantidadHuespedes" type="number" min="1" value="@filtros.CantidadHuespedes" />
+ </div>
+ <div class="col-md-2">
+ <label class="form-label">Precio máx.</label>
+ <input class="form-control" name="PrecioMax" type="number" min="0" step="0.01" value="@filtros.PrecioMax" />
+ </div>
+ <div class="col-md-2">
+ <label class="form-label">Hotel/Ubicación</label>
+ <input class="form-control" name="Ubicacion" type="text" value="@filtros.Ubicacion" placeholder="Ciudad u hotel" />
+ </div>
+ <div class="col-md-4">
+ <label class="form-label">Comodidades (coma)</label>
+ <input class="form-control" name="Comodidades" type="text" value="@filtros.Comodidades" placeholder="wifi, desayuno" />
+ </div>
+ <div class="col-12">
+ <button class="btn btn-primary" type="submit">Buscar</button>
+ </div>
+ </form>
+
+ @if (!ViewData.ModelState.IsValid)
+ {
+ <div class="alert alert-danger mt-3">
+ @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+ {
+ <div>@err.ErrorMessage</div>
+ }
+ </div>
+ }
+
+ <hr />
+
+ <div class="row">
+ <div class="col-md-8">
+ @if (Model.Resultados.Any())
+ {
+ <div class="list-group">
+ @foreach (var r in Model.Resultados)
+ {
+ var cover = r.Gallery.FirstOrDefault() ?? "/img/placeholder.png";
+ <div class="list-group-item">
+ <div class="row g-2">
+ <div class="col-sm-3">
+ <a href="@cover" class="glightbox" data-gallery="res">
+ <img src="@cover" class="img-fluid rounded" />
+ </a>
+ </div>
+ <div class="col-sm-9">
+ <h5>@r.Hotel.Nombre - Habitación @r.Habitacion.Numero (@r.Habitacion.Tipo)</h5>
+ <div>Amenidades: @r.Habitacion.Amenidades</div>
+ <div>Capacidad: @r.Habitacion.Capacidad</div>
+ <div>Precio por noche (promedio): <strong>@r.PrecioPorNochePromedio.ToString("C")</strong></div>
+ <div>Total @r.Noches noches: <strong>@r.PrecioTotal.ToString("C")</strong></div>
+ <div class="mt-2 d-flex gap-2 flex-wrap">
+ @foreach (var img in r.Gallery)
+ { <a href="@img" class="glightbox" data-gallery="res"><img src="@img" class="rounded border" style="width:80px;height:60px;object-fit:cover" /></a> }
+ </div>
+ </div>
+ </div>
+ </div>
+ }
+ </div>
+ }
+ else
+ {
+ <div class="alert alert-info">No hay resultados.</div>
+ }
+ </div>
+ <div class="col-md-4">
+ <h5>Mapa de disponibilidad</h5>
+ <div id="availabilityMap" class="border rounded p-2" style="height:300px">
+ <!-- Visual grid availability -->
+ </div>
+ <partial name="_PoliticaCancelacion" />
+ </div>
+ </div>
+</div>
+
+@section Scripts{
+ <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/%40eonasdan/tempus-dominus@6.9.7/dist/js/tempus-dominus.min.js"></script>
+ <script>
+ const pickerIn = new tempusDominus.TempusDominus(document.getElementById('dtEntrada'), { display: { components: { décadas:false, año:true, mes:true, fecha:true, horas:false, minutos:false }}});
+ const pickerOut = new tempusDominus.TempusDominus(document.getElementById('dtSalida'), { display: { components: { décadas:false, año:true, mes:true, fecha:true, horas:false, minutos:false }}});
+ GLightbox({ selector: '.glightbox' });
+ // Pintar disponibilidad (demo)
+ const map = document.getElementById('availabilityMap');
+ if (map){
+ map.innerHTML = '<div class="d-flex flex-wrap">' +
+ Array.from({length:30}, (_,i)=>`<div style="width:10%;padding:6px"><div style="height:24px;border-radius:4px;background:${i%5===0?'#dc3545':'#28a745'}"></div></div>`).join('') +
+ '</div>';
+ }
+ </script>
+}

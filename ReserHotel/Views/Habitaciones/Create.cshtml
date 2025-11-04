@@ -1,0 +1,47 @@
+@model ReserHotel.Models.DTOs.HabitacionDto
+@using HotelSystem.Domain.Entities
+@{
+ ViewData["Title"] = "Nueva Habitación";
+}
+<div class="container mt-4">
+ <h2>Nueva Habitación</h2>
+ <form asp-action="Create" method="post" class="row g-3">
+ <div class="col-md-4">
+ <label asp-for="HotelId" class="form-label"></label>
+ <select asp-for="HotelId" asp-items="ViewBag.Hoteles" class="form-select"></select>
+ <span asp-validation-for="HotelId" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="Numero" class="form-label"></label>
+ <input asp-for="Numero" class="form-control" />
+ <span asp-validation-for="Numero" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="Piso" class="form-label"></label>
+ <input asp-for="Piso" class="form-control" />
+ <span asp-validation-for="Piso" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="Tipo" class="form-label"></label>
+ <select asp-for="Tipo" class="form-select" asp-items="Html.GetEnumSelectList<TipoHabitacion>()"></select>
+ <span asp-validation-for="Tipo" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="Capacidad" class="form-label"></label>
+ <input asp-for="Capacidad" class="form-control" />
+ <span asp-validation-for="Capacidad" class="text-danger"></span>
+ </div>
+ <div class="col-md-12">
+ <label asp-for="Amenidades" class="form-label"></label>
+ <textarea asp-for="Amenidades" class="form-control" rows="3"></textarea>
+ <span asp-validation-for="Amenidades" class="text-danger"></span>
+ </div>
+ <div class="col-12">
+ <button type="submit" class="btn btn-primary">Guardar</button>
+ <a class="btn btn-secondary" href="@Url.Action("Index")">Volver</a>
+ </div>
+ </form>
+</div>
+@section Scripts{
+ <partial name="_ValidationScriptsPartial" />
+}
