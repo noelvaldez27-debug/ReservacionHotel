@@ -4,10 +4,14 @@
  ViewData["Title"] = "Crear Reserva";
 }
 <div class="container mt-4">
- <h2> crear reserva </h2>
+ <h2>Crear reserva</h2>
+
  @if (TempData["Error"] != null){<div class="alert alert-danger">@TempData["Error"]</div>}
+ <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+ 
  <form asp-action="Create" method="post" class="row g-3">
- <div class="col-12"><h5>datos del huésped</h5></div>
+ <!-- Datos requeridos del huésped -->
+ <div class="col-12"><h5>Datos del huésped</h5></div>
  <div class="col-md-3">
  <label asp-for="Documento" class="form-label"></label>
  <input asp-for="Documento" class="form-control" />
@@ -34,49 +38,83 @@
  <span asp-validation-for="Pais" class="text-danger"></span>
  </div>
 
- <div class="col-12"><h5>datos de la reserva</h5></div>
+ <!-- Datos requeridos de la reserva -->
+ <div class="col-12"><h5>Datos de la reserva</h5></div>
  <div class="col-md-3">
  <label asp-for="FechaEntrada" class="form-label"></label>
- <input asp-for="FechaEntrada" class="form-control" type="date" />
+ <input asp-for="FechaEntrada" class="form-control" type="date" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
  <span asp-validation-for="FechaEntrada" class="text-danger"></span>
  </div>
  <div class="col-md-3">
  <label asp-for="FechaSalida" class="form-label"></label>
- <input asp-for="FechaSalida" class="form-control" type="date" />
+ <input asp-for="FechaSalida" class="form-control" type="date" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" />
  <span asp-validation-for="FechaSalida" class="text-danger"></span>
  </div>
  <div class="col-md-6">
- <label asp-for="HabitacionId" class="form-label">habitación</label>
- <select asp-for="HabitacionId" class="form-select" asp-items="@(new SelectList(Model.Habitaciones, "Id", "Numero"))"></select>
- <span asp-validation-for="HabitacionId" class="text-danger"></span>
+ <label class="form-label">Hotel</label>
+ <select asp-for="HotelId" class="form-select" asp-items="@(new SelectList(Model.Hoteles, "Id", "Nombre"))">
+ <option value="">-- Seleccionar --</option>
+ </select>
+ <span asp-validation-for="HotelId" class="text-danger"></span>
  </div>
 
- <div class="col-12"><h5>servicios adicionales</h5></div>
+ <!-- Número de habitación seleccionado (solo lectura) -->
+ <input type="hidden" asp-for="HabitacionId" />
+ <div class="col-md-6">
+ <label class="form-label">Número de habitación</label>
+ <input id="RoomNumberSelected" class="form-control" readonly />
+ </div>
+
+ <!-- Comodidades seleccionables según la habitación -->
+ <div class="col-12"><h5>Comodidades de la habitación</h5></div>
+ <div class="col-md-3 form-check">
+ <input id="AmenNetflix" type="checkbox" class="form-check-input" checked disabled />
+ <label class="form-check-label" for="AmenNetflix">Netflix</label>
+ </div>
+ <div class="col-md-3 form-check">
+ <input id="AmenWifi" type="checkbox" class="form-check-input" disabled />
+ <label class="form-check-label" for="AmenWifi">WiFi</label>
+ </div>
+ <div class="col-md-3 form-check">
+ <input id="AmenJacuzzi" type="checkbox" class="form-check-input" disabled />
+ <label class="form-check-label" for="AmenJacuzzi">Jacuzzi</label>
+ </div>
+ 
+ <!-- Servicios adicionales contratables (del hotel) -->
+ <div class="col-12"><h5>Servicios adicionales</h5></div>
+ <div class="col-12">@Html.ValidationMessage("Servicios", new { @class = "text-danger" })</div>
  <div class="col-md-3 form-check">
  <input class="form-check-input" asp-for="Desayuno" />
- <label class="form-check-label" asp-for="Desayuno">desayuno</label>
+ <label class="form-check-label" asp-for="Desayuno">Desayuno</label>
  </div>
  <div class="col-md-3 form-check">
  <input class="form-check-input" asp-for="Spa" />
- <label class="form-check-label" asp-for="Spa">spa</label>
+ <label class="form-check-label" asp-for="Spa">Spa</label>
  </div>
  <div class="col-md-3 form-check">
  <input class="form-check-input" asp-for="Estacionamiento" />
- <label class="form-check-label" asp-for="Estacionamiento">estacionamiento</label>
+ <label class="form-check-label" asp-for="Estacionamiento">Estacionamiento</label>
  </div>
  <div class="col-md-3 form-check">
  <input class="form-check-input" asp-for="LateCheckout" />
- <label class="form-check-label" asp-for="LateCheckout">late checkout</label>
+ <label class="form-check-label" asp-for="LateCheckout">Late checkout</label>
  </div>
 
- <div class="col-12"><h5>resumen</h5></div>
+ <!-- Resumen con totales en vivo -->
+ <div class="col-12"><h5>Resumen</h5></div>
  <div class="col-md-8">
- <partial name="_ReservaResumen" model="Model" />
+ <div id="liveSummary" class="border rounded p-3">
+ <div class="d-flex justify-content-between"><span>Noches</span><strong id="sumNoches">0</strong></div>
+ <div class="d-flex justify-content-between"><span>Habitación</span><strong id="sumHabitacion">-</strong></div>
+ <div class="d-flex justify-content-between"><span>Subtotal habitación</span><strong id="sumSubHab">$0.00</strong></div>
+ <div class="d-flex justify-content-between"><span>Servicios</span><strong id="sumSubServ">$0.00</strong></div>
+ <div class="d-flex justify-content-between"><span>Descuento</span><strong id="sumDesc">-</strong></div>
+ <hr />
+ <div class="d-flex justify-content-between"><span>Total</span><strong id="sumTotal">$0.00</strong></div>
+ </div>
  <div class="form-check mt-2">
  <input class="form-check-input" type="checkbox" id="terms" required />
- <label class="form-check-label" for="terms">
- Acepto los términos y condiciones.
- </label>
+ <label class="form-check-label" for="terms">Acepto los términos y condiciones.</label>
  </div>
  <partial name="_PoliticaCancelacion" />
  </div>
@@ -86,10 +124,163 @@
  </div>
  </div>
 
+ <!-- Habitaciones disponibles (al final) -->
  <div class="col-12">
- <button type="submit" class="btn btn-success">pagar y confirmar</button>
- <a class="btn btn-secondary" href="@Url.Action("Search")">volver</a>
+ <div class="d-flex justify-content-between align-items-center">
+ <h5 class="mb-0">Habitaciones disponibles</h5>
+ <button type="button" id="btnBuscarDisponibles" class="btn btn-outline-primary btn-sm">Buscar</button>
+ </div>
+ <small class="text-muted">Seleccione fechas y hotel para listar. Luego elija una tarjeta.</small>
+ <div id="gridDisponibles" class="row mt-3 g-3"></div>
+ </div>
+
+ <div class="col-12">
+ <button type="submit" class="btn btn-success">Pagar y confirmar</button>
+ <a class="btn btn-secondary" href="@Url.Action("Search")">Volver</a>
  </div>
  </form>
 </div>
-@section Scripts{<partial name="_ValidationScriptsPartial" />}
+@section Scripts{
+ <partial name="_ValidationScriptsPartial" />
+ <script>
+ // control de fechas mínimas
+ const inEl = document.getElementById('FechaEntrada');
+ const outEl = document.getElementById('FechaSalida');
+ if (inEl && outEl){
+ inEl.addEventListener('change', function(){
+ const d = new Date(this.value);
+ if (!isNaN(d)){
+ d.setDate(d.getDate()+1);
+ outEl.min = d.toISOString().slice(0,10);
+ if (new Date(outEl.value) <= new Date(this.value)){
+ outEl.value = outEl.min;
+ }
+ }
+ });
+ }
+ 
+ const btnBuscar = document.getElementById('btnBuscarDisponibles');
+ const grid = document.getElementById('gridDisponibles');
+ const hotelSel = document.getElementById('HotelId');
+ const habInput = document.getElementById('HabitacionId');
+ const roomNumber = document.getElementById('RoomNumberSelected');
+ const amenWifi = document.getElementById('AmenWifi');
+ const amenJacuzzi = document.getElementById('AmenJacuzzi');
+ const amenNetflix = document.getElementById('AmenNetflix');
+ const serviceChecks = {
+ Desayuno: document.getElementById('Desayuno'),
+ Spa: document.getElementById('Spa'),
+ Estacionamiento: document.getElementById('Estacionamiento'),
+ LateCheckout: document.getElementById('LateCheckout')
+ };
+ let lastData = [];
+
+ function toCurrency(v){
+ return new Intl.NumberFormat(undefined,{ style:'currency', currency:'USD'}).format(v||0);
+ }
+ function calcNoches(){
+ const fe = new Date(document.getElementById('FechaEntrada').value);
+ const fs = new Date(document.getElementById('FechaSalida').value);
+ if (isNaN(fe) || isNaN(fs)) return0;
+ const diff = Math.round((fs - fe) / (1000*60*60*24));
+ return Math.max(0, diff);
+ }
+ function updateSummary(){
+ const noches = calcNoches();
+ const sel = lastData.find(x=>String(x.id)===String(habInput.value));
+ document.getElementById('sumNoches').textContent = noches;
+ document.getElementById('sumHabitacion').textContent = roomNumber.value || '-';
+ const subHab = sel ? Number(sel.precioTotal) :0;
+ document.getElementById('sumSubHab').textContent = toCurrency(subHab);
+ // servicios marcados suman precios unitarios del hotel seleccionado
+ let subServ =0;
+ if (sel){
+ const map = new Map((sel.servicios||[]).map(s=>[String(s.nombre).toLowerCase(), Number(s.precio)]));
+ if (serviceChecks.Desayuno.checked && map.has('desayuno')) subServ += map.get('desayuno');
+ if (serviceChecks.Spa.checked && map.has('spa')) subServ += map.get('spa');
+ if (serviceChecks.Estacionamiento.checked && map.has('estacionamiento')) subServ += map.get('estacionamiento');
+ if (serviceChecks.LateCheckout.checked && map.has('latecheckout')) subServ += map.get('latecheckout');
+ }
+ document.getElementById('sumSubServ').textContent = toCurrency(subServ);
+ document.getElementById('sumDesc').textContent = '-';
+ document.getElementById('sumTotal').textContent = toCurrency(subHab + subServ);
+ }
+
+ function renderCards(data){
+ lastData = data || [];
+ grid.innerHTML = '';
+ if (!data || data.length ===0){
+ grid.innerHTML = '<div class="col-12"><div class="alert alert-warning">No hay habitaciones disponibles.</div></div>';
+ updateSummary();
+ return;
+ }
+ data.forEach(item => {
+ const col = document.createElement('div');
+ col.className = 'col-md-4';
+ col.innerHTML = `
+ <div class="card h-100 selectable-room" data-id="${item.id}" data-numero="${item.numero}" data-hotel-id="${item.hotelId}" data-wifi="${item.hasWifi}" data-jacuzzi="${item.hasJacuzzi}">
+ <div class="card-body">
+ <h5 class="card-title">Hab. ${item.numero} - ${item.tipo}</h5>
+ <h6 class="card-subtitle mb-2 text-muted">${item.hotel}</h6>
+ <p class="card-text mb-1">Precio promedio: $${item.precioPromedio}</p>
+ </div>
+ </div>`;
+ grid.appendChild(col);
+ });
+
+ document.querySelectorAll('.selectable-room').forEach(card => {
+ card.addEventListener('click', () => {
+ document.querySelectorAll('.selectable-room').forEach(c=>c.classList.remove('border','border-primary'));
+ card.classList.add('border','border-primary');
+ const id = card.getAttribute('data-id');
+ const numero = card.getAttribute('data-numero');
+ const hid = card.getAttribute('data-hotel-id');
+ const hasWifi = card.getAttribute('data-wifi') === 'true';
+ const hasJacuzzi = card.getAttribute('data-jacuzzi') === 'true';
+ habInput.value = id;
+ roomNumber.value = numero;
+ amenWifi.checked = hasWifi; amenWifi.disabled = !hasWifi;
+ amenJacuzzi.checked = hasJacuzzi; amenJacuzzi.disabled = !hasJacuzzi;
+ updateHotelServices(hid);
+ updateSummary();
+ });
+ });
+ updateSummary();
+ }
+
+ function updateHotelServices(hotelId){
+ const found = lastData.find(x=>String(x.hotelId)===String(hotelId));
+ const names = new Set((found?.servicios||[]).map(s=>String(s.nombre).toLowerCase()));
+ const map = { Desayuno:'desayuno', Spa:'spa', Estacionamiento:'estacionamiento', LateCheckout:'latecheckout' };
+ for (const k in serviceChecks){
+ const enabled = names.has(map[k]);
+ serviceChecks[k].disabled = !enabled;
+ if (!enabled) serviceChecks[k].checked = false;
+ }
+ }
+
+ async function buscar(){
+ const fe = document.getElementById('FechaEntrada').value;
+ const fs = document.getElementById('FechaSalida').value;
+ const h = hotelSel.value || '';
+ if (!fe || !fs){
+ grid.innerHTML = '<div class="col-12"><div class="alert alert-info">Seleccione fecha de entrada y salida.</div></div>';
+ updateSummary();
+ return;
+ }
+ const url = `@Url.Action("GetDisponibles")?fechaEntrada=${fe}&fechaSalida=${fs}&hotelId=${h}`;
+ const res = await fetch(url);
+ if (!res.ok){ grid.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error obteniendo disponibilidad.</div></div>'; updateSummary(); return; }
+ const data = await res.json();
+ renderCards(data);
+ }
+
+ btnBuscar?.addEventListener('click', buscar);
+ document.getElementById('FechaEntrada')?.addEventListener('change', ()=>{ buscar(); updateSummary();});
+ document.getElementById('FechaSalida')?.addEventListener('change', ()=>{ buscar(); updateSummary();});
+ hotelSel?.addEventListener('change', ()=>{ buscar(); updateSummary();});
+ Object.values(serviceChecks).forEach(cb=> cb.addEventListener('change', updateSummary));
+ // carga inicial
+ setTimeout(()=>{ buscar(); updateSummary(); },0);
+ </script>
+}

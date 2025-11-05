@@ -11,41 +11,47 @@ using Microsoft.EntityFrameworkCore;
 using Quartz;
 using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace ReserHotel;
 
-// Serilog: consola + archivo
-builder.Host.UseSerilog((ctx, cfg) => cfg
+internal class Program
+{
+ public static async Task Main(string[] args)
+ {
+ var builder = WebApplication.CreateBuilder(args);
+
+ // Serilog: consola + archivo
+ builder.Host.UseSerilog((ctx, cfg) => cfg
  .ReadFrom.Configuration(ctx.Configuration)
  .WriteTo.Console()
  .WriteTo.File("logs/app-.log", rollingInterval: RollingInterval.Day));
 
-// Connection string preferida desde appsettings; si falla, probar variantes locales
-var primary = builder.Configuration.GetConnectionString("Default")
+ // Connection string preferida desde appsettings; si falla, probar variantes locales
+ var primary = builder.Configuration.GetConnectionString("Default")
  ?? "Server=LAPTOP-GR5R0DAP;Database=HotelSystemDb;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=15";
 
-static bool CanOpen(string cs)
-{
+ static bool CanOpen(string cs)
+ {
  try { using var c = new SqlConnection(cs); c.Open(); return true; } catch { return false; }
-}
+ }
 
-var candidates = new[]
-{
+ var candidates = new[]
+ {
  primary,
  "Server=(local);Database=HotelSystemDb;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=True;Connect Timeout=15",
  "Server=localhost;Database=HotelSystemDb;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=True;Connect Timeout=15",
  "Server=.;Database=HotelSystemDb;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=True;Connect Timeout=15",
  "Server=tcp:LAPTOP-GR5R0DAP,1433;Database=HotelSystemDb;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=15"
-};
+ };
 
-string chosen = candidates.FirstOrDefault(CanOpen) ?? primary;
-Log.Information("[DB] Usando cadena de conexión: {DataSource}", new SqlConnectionStringBuilder(chosen).DataSource);
+ string chosen = candidates.FirstOrDefault(CanOpen) ?? primary;
+ Log.Information("[DB] Usando cadena de conexión: {DataSource}", new SqlConnectionStringBuilder(chosen).DataSource);
 
-// DbContext
-builder.Services.AddDbContext<HotelDbContext>(options =>
+ // DbContext
+ builder.Services.AddDbContext<HotelDbContext>(options =>
  options.UseSqlServer(chosen, sql => sql.EnableRetryOnFailure()));
 
-// Identity
-builder.Services
+ // Identity
+ builder.Services
  .AddDefaultIdentity<ApplicationUser>(options =>
  {
  options.SignIn.RequireConfirmedAccount = false;
@@ -53,21 +59,21 @@ builder.Services
  .AddRoles<IdentityRole>()
  .AddEntityFrameworkStores<HotelDbContext>();
 
-// MVC
-builder.Services.AddControllersWithViews();
+ // MVC
+ builder.Services.AddControllersWithViews();
 
-// UnitOfWork & repositories
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+ // UnitOfWork & repositories
+ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// Infra services
-builder.Services.AddSingleton<IEmailSender, ConsoleEmailSender>();
+ // Infra services
+ builder.Services.AddSingleton<IEmailSender, ConsoleEmailSender>();
 
-// AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
+ // AutoMapper
+ builder.Services.AddAutoMapper(typeof(Program));
 
-// Quartz job to send reminders48h/24h (programación simple cada hora)
-builder.Services.AddQuartz(q =>
-{
+ // Quartz job to send reminders48h/24h (programación simple cada hora)
+ builder.Services.AddQuartz(q =>
+ {
  q.UseMicrosoftDependencyInjectionJobFactory();
  var jobKey = JobKey.Create("ReminderJob");
  q.AddJob<ReminderJob>(opts => opts.WithIdentity(jobKey));
@@ -75,35 +81,35 @@ builder.Services.AddQuartz(q =>
  .ForJob(jobKey)
  .WithIdentity("ReminderJob-trigger")
  .WithSimpleSchedule(s => s.WithIntervalInHours(1).RepeatForever()));
-});
+ });
 
-builder.Services.AddQuartzHostedService(options =>
-{
+ builder.Services.AddQuartzHostedService(options =>
+ {
  options.WaitForJobsToComplete = true;
-});
+ });
 
-var app = builder.Build();
+ var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
-{
+ if (!app.Environment.IsDevelopment())
+ {
  app.UseExceptionHandler("/Home/Error");
  app.UseHsts();
  app.UseHttpsRedirection();
-}
+ }
 
-app.UseStaticFiles();
-app.UseRouting();
-app.UseAuthentication();
-app.UseAuthorization();
+ app.UseStaticFiles();
+ app.UseRouting();
+ app.UseAuthentication();
+ app.UseAuthorization();
 
-app.MapControllerRoute(
+ app.MapControllerRoute(
  name: "default",
  pattern: "{controller=Home}/{action=Index}/{id?}");
-app.MapRazorPages();
+ app.MapRazorPages();
 
-// Migraciones + seed y roles
-using (var scope = app.Services.CreateScope())
-{
+ // Migraciones + seed y roles
+ using (var scope = app.Services.CreateScope())
+ {
  try
  {
  var db = scope.ServiceProvider.GetRequiredService<HotelDbContext>();
@@ -116,9 +122,11 @@ using (var scope = app.Services.CreateScope())
  {
  Log.Error(ex, "[Startup] No se pudo aplicar migraciones/seed");
  }
-}
+ }
 
-app.Run();
+ await app.RunAsync();
+ }
+}
 
 public class ReminderJob : IJob
 {

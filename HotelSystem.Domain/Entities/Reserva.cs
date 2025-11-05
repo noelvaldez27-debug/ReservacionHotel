@@ -12,6 +12,7 @@ public class Reserva
 {
  public int Id { get; set; }
  public string NumeroReserva { get; set; } = string.Empty;
+ public DateTime FechaReserva { get; set; } // fecha/hora en que se registró la reserva
  public DateTime FechaEntrada { get; set; }
  public DateTime FechaSalida { get; set; }
  public EstadoReserva Estado { get; set; }

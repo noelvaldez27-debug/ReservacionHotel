@@ -30,6 +30,9 @@ public static class DataSeeder
  // Migraciones
  try { await db.Database.MigrateAsync(ct); } catch { await db.Database.EnsureCreatedAsync(ct); }
 
+ // Parche: si la tabla Reservas no tiene la columna FechaReserva, agregarla
+ await EnsureColumnAsync(db, "Reservas", "FechaReserva", "DATETIME2 NOT NULL CONSTRAINT DF_Reservas_FechaReserva DEFAULT SYSUTCDATETIME()", ct);
+
  if (await db.Hoteles.AnyAsync(ct)) return;
 
  var hotel = new Hotel
@@ -42,16 +45,30 @@ public static class DataSeeder
  db.Hoteles.Add(hotel);
  await db.SaveChangesAsync(ct);
 
+ // Habitaciones:20 cuartos
  var habitaciones = new List<Habitacion>();
- int[] simples = [101,102,103,104,105];
- int[] dobles = [201,202,203,204,205];
- int[] suites = [301,302,303,304,305];
+ int[] simples = Enumerable.Range(101,8).ToArray();
+ int[] dobles = Enumerable.Range(201,7).ToArray();
+ int[] suites = Enumerable.Range(301,5).ToArray();
+
+ var jacuzziRooms = new HashSet<int>(suites.Take(3).Concat(dobles.Take(2))); //5 con jacuzzi (y wifi)
+ var wifiOnlyRooms = new HashSet<int>(simples.Take(3).Concat(dobles.Skip(2).Take(2))); //5 adicionales solo wifi
+
+ string BuildAmenidades(int numero, string extra)
+ {
+ var list = new List<string> { "netflix", "tv", "aire" };
+ if (jacuzziRooms.Contains(numero)) { list.Add("jacuzzi"); list.Add("wifi"); }
+ else if (wifiOnlyRooms.Contains(numero)) { list.Add("wifi"); }
+ if (!string.IsNullOrWhiteSpace(extra)) list.Add(extra);
+ return string.Join(", ", list);
+ }
+
  foreach (var n in simples)
- habitaciones.Add(new Habitacion { Numero = n, Piso = n/100, Tipo = TipoHabitacion.Simple, Capacidad =1, Amenidades = "wifi, tv, aire", HotelId = hotel.Id });
+ habitaciones.Add(new Habitacion { Numero = n, Piso = n /100, Tipo = TipoHabitacion.Simple, Capacidad =1, Amenidades = BuildAmenidades(n, string.Empty), HotelId = hotel.Id });
  foreach (var n in dobles)
- habitaciones.Add(new Habitacion { Numero = n, Piso = n/100, Tipo = TipoHabitacion.Doble, Capacidad =2, Amenidades = "wifi, tv, aire, cafetera", HotelId = hotel.Id });
+ habitaciones.Add(new Habitacion { Numero = n, Piso = n /100, Tipo = TipoHabitacion.Doble, Capacidad =2, Amenidades = BuildAmenidades(n, "cafetera"), HotelId = hotel.Id });
  foreach (var n in suites)
- habitaciones.Add(new Habitacion { Numero = n, Piso = n/100, Tipo = TipoHabitacion.Suite, Capacidad =4, Amenidades = "wifi, tv, aire, cafetera, jacuzzi", HotelId = hotel.Id });
+ habitaciones.Add(new Habitacion { Numero = n, Piso = n /100, Tipo = TipoHabitacion.Suite, Capacidad =4, Amenidades = BuildAmenidades(n, "cafetera"), HotelId = hotel.Id });
  db.Habitaciones.AddRange(habitaciones);
  await db.SaveChangesAsync(ct);
 
@@ -101,6 +118,7 @@ public static class DataSeeder
  var reserva = new Reserva
  {
  NumeroReserva = $"HX-{he:yyyyMMdd}-{i:000}",
+ FechaReserva = he.AddDays(-7),
  FechaEntrada = he,
  FechaSalida = he.AddDays(nights),
  Estado = EstadoReserva.Completada,
@@ -150,6 +168,22 @@ public static class DataSeeder
  MetodoPago = "Tarjeta"
  });
  await db.SaveChangesAsync(ct);
+ }
+ }
+
+ private static async Task EnsureColumnAsync(HotelDbContext db, string table, string column, string definition, CancellationToken ct)
+ {
+ var sql = $@"IF COL_LENGTH('{table}', '{column}') IS NULL
+BEGIN
+ ALTER TABLE [{table}] ADD [{column}] {definition};
+END";
+ try
+ {
+ await db.Database.ExecuteSqlRawAsync(sql, ct);
+ }
+ catch
+ {
+ // ignorar si no se puede aplicar (permisos) o ya existe con otra restricción por defecto
  }
  }
 }

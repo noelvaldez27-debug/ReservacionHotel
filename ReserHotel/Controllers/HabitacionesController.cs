@@ -54,6 +54,14 @@ public class HabitacionesController : Controller
  await PopulateCombosAsync(ct);
  return View(dto);
  }
+ // Validación de unicidad (HotelId, Numero)
+ var existentes = await _uow.Habitaciones.GetAll(ct);
+ if (existentes.Any(h => h.HotelId == dto.HotelId && h.Numero == dto.Numero))
+ {
+ ModelState.AddModelError(nameof(dto.Numero), "Ya existe una habitación con ese número en el hotel.");
+ await PopulateCombosAsync(ct);
+ return View(dto);
+ }
  var entity = _mapper.Map<Habitacion>(dto);
  await _uow.Habitaciones.AddAsync(entity, ct);
  await _uow.CommitAsync(ct);
@@ -77,6 +85,14 @@ public class HabitacionesController : Controller
  if (id != dto.Id) return BadRequest();
  if (!ModelState.IsValid)
  {
+ await PopulateCombosAsync(ct);
+ return View(dto);
+ }
+ // Validación de unicidad (HotelId, Numero) excluyendo la propia
+ var existentes = await _uow.Habitaciones.GetAll(ct);
+ if (existentes.Any(h => h.HotelId == dto.HotelId && h.Numero == dto.Numero && h.Id != dto.Id))
+ {
+ ModelState.AddModelError(nameof(dto.Numero), "Ya existe una habitación con ese número en el hotel.");
  await PopulateCombosAsync(ct);
  return View(dto);
  }
@@ -117,6 +133,36 @@ public class HabitacionesController : Controller
  var gallery = GetGalleryForType(entity.Tipo);
  ViewBag.Gallery = gallery;
  return View(entity);
+ }
+
+ [HttpGet]
+ public async Task<IActionResult> ServiciosHotel(int hotelId, CancellationToken ct)
+ {
+ var servicios = (await _uow.ServiciosAdicionales.GetAll(ct)).Where(s => s.HotelId == hotelId)
+ .Select(s => new { nombre = s.Nombre.ToString(), precio = s.Precio })
+ .ToList();
+ return Ok(servicios);
+ }
+
+ [HttpGet]
+ public async Task<IActionResult> Quote(int hotelId, TipoHabitacion tipo, DateTime fechaEntrada, DateTime fechaSalida, bool hasJacuzzi = false, CancellationToken ct = default)
+ {
+ if (fechaSalida <= fechaEntrada) return BadRequest("Rango inválido");
+ var tarifas = (await _uow.TarifasHabitacion.GetAll(ct)).ToList();
+ var fe = fechaEntrada.Date; var fs = fechaSalida.Date;
+ decimal subtotal =0m; int noches =0;
+ for (var d = fe; d < fs; d = d.AddDays(1))
+ {
+ var esAlta = (d.Month ==1 || d.Month ==7 || d.Month ==8 || d.Month ==12);
+ var temp = esAlta ? Temporada.Alta : Temporada.Baja;
+ var t = tarifas.FirstOrDefault(t => t.HotelId == hotelId && t.TipoHabitacion == tipo && t.Temporada == temp);
+ if (t == null) return BadRequest("No hay tarifa para el rango");
+ var precioBase = t.PrecioBase * (1 + t.VariacionPorcentaje /100m);
+ if (hasJacuzzi) precioBase *=1 +0.15m;
+ subtotal += precioBase;
+ noches++;
+ }
+ return Ok(new { noches, subtotal = Math.Round(subtotal,2) });
  }
 
  private static IReadOnlyList<string> GetGalleryForType(TipoHabitacion tipo)
