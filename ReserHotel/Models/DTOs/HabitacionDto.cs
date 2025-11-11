@@ -28,4 +28,13 @@ public class HabitacionDto
  [Required]
  [Display(Name = "Hotel")]
  public int HotelId { get; set; }
+
+ // Datos del registrante (no mapeados a entidad)
+ [Display(Name = "Nombre completo")]
+ [StringLength(150)]
+ public string? RegistradoNombreCompleto { get; set; }
+
+ [Display(Name = "DNI")]
+ [StringLength(20)]
+ public string? RegistradoDni { get; set; }
 }

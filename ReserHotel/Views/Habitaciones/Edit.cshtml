@@ -13,7 +13,7 @@
  <span asp-validation-for="HotelId" class="text-danger"></span>
  </div>
  <div class="col-md-4">
- <label asp-for="Numero" class="form-label"></label>
+ <label asp-for="Numero" class="form-label">Habitaciones disponibles</label>
  <input asp-for="Numero" class="form-control" />
  <span asp-validation-for="Numero" class="text-danger"></span>
  </div>
@@ -32,6 +32,23 @@
  <input asp-for="Capacidad" class="form-control" />
  <span asp-validation-for="Capacidad" class="text-danger"></span>
  </div>
+
+ <!-- Nombre + DNI en la misma fila -->
+ <div class="col-12">
+ <div class="row g-3">
+ <div class="col-md-8">
+ <label asp-for="RegistradoNombreCompleto" class="form-label"></label>
+ <input asp-for="RegistradoNombreCompleto" class="form-control" />
+ <span asp-validation-for="RegistradoNombreCompleto" class="text-danger"></span>
+ </div>
+ <div class="col-md-4">
+ <label asp-for="RegistradoDni" class="form-label"></label>
+ <input asp-for="RegistradoDni" class="form-control" />
+ <span asp-validation-for="RegistradoDni" class="text-danger"></span>
+ </div>
+ </div>
+ </div>
+
  <div class="col-md-12">
  <label asp-for="Amenidades" class="form-label"></label>
  <textarea asp-for="Amenidades" class="form-control" rows="3"></textarea>

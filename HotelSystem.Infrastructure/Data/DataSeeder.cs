@@ -30,8 +30,17 @@ public static class DataSeeder
  // Migraciones
  try { await db.Database.MigrateAsync(ct); } catch { await db.Database.EnsureCreatedAsync(ct); }
 
- // Parche: si la tabla Reservas no tiene la columna FechaReserva, agregarla
+ // Parche: columnas faltantes
  await EnsureColumnAsync(db, "Reservas", "FechaReserva", "DATETIME2 NOT NULL CONSTRAINT DF_Reservas_FechaReserva DEFAULT SYSUTCDATETIME()", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RegistradoNombreCompleto", "NVARCHAR(150) NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RegistradoDni", "NVARCHAR(20) NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RefEntrada", "DATETIME2 NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RefSalida", "DATETIME2 NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RefNoches", "INT NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RefSubtotalHabitacion", "DECIMAL(18,2) NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RefSubtotalServicios", "DECIMAL(18,2) NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RefTotal", "DECIMAL(18,2) NULL", ct);
+ await EnsureColumnAsync(db, "Habitaciones", "RefServiciosJson", "NVARCHAR(2000) NULL", ct);
 
  if (await db.Hoteles.AnyAsync(ct)) return;
 

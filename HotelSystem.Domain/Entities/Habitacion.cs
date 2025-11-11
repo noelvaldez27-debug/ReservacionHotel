@@ -16,6 +16,19 @@ public class Habitacion
  public int Capacidad { get; set; }
  public string? Amenidades { get; set; }
 
+ // Datos de registro de la habitación (quién la registró)
+ public string? RegistradoNombreCompleto { get; set; }
+ public string? RegistradoDni { get; set; }
+
+ // Cotización de referencia guardada al crear/editar
+ public DateTime? RefEntrada { get; set; }
+ public DateTime? RefSalida { get; set; }
+ public int? RefNoches { get; set; }
+ public decimal? RefSubtotalHabitacion { get; set; }
+ public decimal? RefSubtotalServicios { get; set; }
+ public decimal? RefTotal { get; set; }
+ public string? RefServiciosJson { get; set; }
+
  public int HotelId { get; set; }
  public Hotel Hotel { get; set; } = null!;
 

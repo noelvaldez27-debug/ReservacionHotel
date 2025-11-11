@@ -39,6 +39,9 @@ public class HotelDbContext : IdentityDbContext<ApplicationUser>
  {
  e.HasIndex(h => new { h.HotelId, h.Numero }).IsUnique();
  e.Property(p => p.Amenidades).HasMaxLength(500);
+ e.Property(p => p.RegistradoNombreCompleto).HasMaxLength(150);
+ e.Property(p => p.RegistradoDni).HasMaxLength(20);
+ e.Property(p => p.RefServiciosJson).HasMaxLength(2000);
  });
 
  // TarifaHabitacion

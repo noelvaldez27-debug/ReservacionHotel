@@ -143,21 +143,19 @@
 @section Scripts{
  <partial name="_ValidationScriptsPartial" />
  <script>
- // control de fechas mínimas
+ // control de fechas mínimas + corrección inicial
  const inEl = document.getElementById('FechaEntrada');
  const outEl = document.getElementById('FechaSalida');
- if (inEl && outEl){
- inEl.addEventListener('change', function(){
- const d = new Date(this.value);
+ function ensureSalidaAfterEntrada(){
+ const d = new Date(inEl.value);
  if (!isNaN(d)){
- d.setDate(d.getDate()+1);
- outEl.min = d.toISOString().slice(0,10);
- if (new Date(outEl.value) <= new Date(this.value)){
- outEl.value = outEl.min;
+ const min = new Date(d); min.setDate(min.getDate()+1);
+ const minStr = min.toISOString().slice(0,10);
+ outEl.min = minStr;
+ if (!outEl.value || new Date(outEl.value) <= d){ outEl.value = minStr; }
  }
  }
- });
- }
+ if (inEl && outEl){ ensureSalidaAfterEntrada(); inEl.addEventListener('change', ensureSalidaAfterEntrada); }
  
  const btnBuscar = document.getElementById('btnBuscarDisponibles');
  const grid = document.getElementById('gridDisponibles');
@@ -174,6 +172,7 @@
  LateCheckout: document.getElementById('LateCheckout')
  };
  let lastData = [];
+ const hotelServiceCache = new Map(); // hotelId -> Map(nombre, precio)
 
  function toCurrency(v){
  return new Intl.NumberFormat(undefined,{ style:'currency', currency:'USD'}).format(v||0);
@@ -185,22 +184,38 @@
  const diff = Math.round((fs - fe) / (1000*60*60*24));
  return Math.max(0, diff);
  }
- function updateSummary(){
+ async function getHotelServicesPrices(hid){
+ if (!hid) return new Map();
+ if (hotelServiceCache.has(hid)) return hotelServiceCache.get(hid);
+ try{
+ const res = await fetch(`@Url.Action("ServiciosHotel","Habitaciones")?hotelId=${hid}`);
+ if(!res.ok) return new Map();
+ const data = await res.json();
+ const map = new Map(data.map(s=>[String(s.nombre).toLowerCase(), Number(s.precio)]));
+ hotelServiceCache.set(hid, map);
+ return map;
+ }catch{ return new Map(); }
+ }
+ function getSelectedHotelId(){
+ const sel = lastData.find(x=>String(x.id)===String(habInput.value));
+ if (sel) return String(sel.hotelId);
+ return String(hotelSel.value||'');
+ }
+ async function updateSummary(){
  const noches = calcNoches();
  const sel = lastData.find(x=>String(x.id)===String(habInput.value));
  document.getElementById('sumNoches').textContent = noches;
  document.getElementById('sumHabitacion').textContent = roomNumber.value || '-';
  const subHab = sel ? Number(sel.precioTotal) :0;
  document.getElementById('sumSubHab').textContent = toCurrency(subHab);
- // servicios marcados suman precios unitarios del hotel seleccionado
+ // servicios: usar precios de la tarjeta si hay selección; si no, usar los del hotel
  let subServ =0;
- if (sel){
- const map = new Map((sel.servicios||[]).map(s=>[String(s.nombre).toLowerCase(), Number(s.precio)]));
- if (serviceChecks.Desayuno.checked && map.has('desayuno')) subServ += map.get('desayuno');
- if (serviceChecks.Spa.checked && map.has('spa')) subServ += map.get('spa');
- if (serviceChecks.Estacionamiento.checked && map.has('estacionamiento')) subServ += map.get('estacionamiento');
- if (serviceChecks.LateCheckout.checked && map.has('latecheckout')) subServ += map.get('latecheckout');
- }
+ let priceMap = new Map((sel?.servicios||[]).map(s=>[String(s.nombre).toLowerCase(), Number(s.precio)]));
+ if (!sel) priceMap = await getHotelServicesPrices(getSelectedHotelId());
+ if (serviceChecks.Desayuno.checked && priceMap.has('desayuno')) subServ += priceMap.get('desayuno');
+ if (serviceChecks.Spa.checked && priceMap.has('spa')) subServ += priceMap.get('spa');
+ if (serviceChecks.Estacionamiento.checked && priceMap.has('estacionamiento')) subServ += priceMap.get('estacionamiento');
+ if (serviceChecks.LateCheckout.checked && priceMap.has('latecheckout')) subServ += priceMap.get('latecheckout');
  document.getElementById('sumSubServ').textContent = toCurrency(subServ);
  document.getElementById('sumDesc').textContent = '-';
  document.getElementById('sumTotal').textContent = toCurrency(subHab + subServ);
@@ -229,7 +244,7 @@
  });
 
  document.querySelectorAll('.selectable-room').forEach(card => {
- card.addEventListener('click', () => {
+ card.addEventListener('click', async () => {
  document.querySelectorAll('.selectable-room').forEach(c=>c.classList.remove('border','border-primary'));
  card.classList.add('border','border-primary');
  const id = card.getAttribute('data-id');
@@ -242,6 +257,7 @@
  amenWifi.checked = hasWifi; amenWifi.disabled = !hasWifi;
  amenJacuzzi.checked = hasJacuzzi; amenJacuzzi.disabled = !hasJacuzzi;
  updateHotelServices(hid);
+ await getHotelServicesPrices(hid); // precargar precios
  updateSummary();
  });
  });
@@ -254,8 +270,8 @@
  const map = { Desayuno:'desayuno', Spa:'spa', Estacionamiento:'estacionamiento', LateCheckout:'latecheckout' };
  for (const k in serviceChecks){
  const enabled = names.has(map[k]);
- serviceChecks[k].disabled = !enabled;
- if (!enabled) serviceChecks[k].checked = false;
+ serviceChecks[k].disabled = !enabled && !hotelServiceCache.has(String(hotelId)); // si no hay tarjeta, activaremos luego si el hotel tiene
+ if (!enabled && !hotelServiceCache.has(String(hotelId))) serviceChecks[k].checked = false;
  }
  }
 
@@ -268,18 +284,21 @@
  updateSummary();
  return;
  }
+ if (new Date(fs) <= new Date(fe)) { ensureSalidaAfterEntrada(); }
  const url = `@Url.Action("GetDisponibles")?fechaEntrada=${fe}&fechaSalida=${fs}&hotelId=${h}`;
  const res = await fetch(url);
  if (!res.ok){ grid.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error obteniendo disponibilidad.</div></div>'; updateSummary(); return; }
  const data = await res.json();
  renderCards(data);
+ await getHotelServicesPrices(String(h)); // precarga
+ await updateSummary();
  }
 
  btnBuscar?.addEventListener('click', buscar);
  document.getElementById('FechaEntrada')?.addEventListener('change', ()=>{ buscar(); updateSummary();});
  document.getElementById('FechaSalida')?.addEventListener('change', ()=>{ buscar(); updateSummary();});
  hotelSel?.addEventListener('change', ()=>{ buscar(); updateSummary();});
- Object.values(serviceChecks).forEach(cb=> cb.addEventListener('change', updateSummary));
+ Object.values(serviceChecks).forEach(cb=> cb.addEventListener('change', ()=>{ updateSummary(); }));
  // carga inicial
  setTimeout(()=>{ buscar(); updateSummary(); },0);
  </script>

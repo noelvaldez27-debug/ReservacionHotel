@@ -5,6 +5,7 @@
  ViewData["Title"] = "Habitaciones";
  var tipoSel = Context?.Request?.Query["tipo"].ToString();
  var pisoSel = Context?.Request?.Query["piso"].ToString();
+ var nombres = ViewBag.NombresPorHab as IDictionary<int,string> ?? new Dictionary<int,string>();
 }
 <div class="container mt-4">
  <h2>Habitaciones</h2>
@@ -41,11 +42,22 @@
  <div class="alert alert-danger">@TempData["Error"]</div>
  }
 
+ <div class="mb-3 d-flex justify-content-end gap-2">
+ <form asp-action="DeleteFirstTwoPages" method="post" onsubmit="return confirm('¿Eliminar todas las habitaciones de las dos primeras páginas? Esta acción también borra reservas relacionadas.');">
+ <input type="hidden" name="tipo" value="@tipoSel" />
+ <input type="hidden" name="piso" value="@pisoSel" />
+ <button type="submit" class="btn btn-outline-danger btn-sm">Eliminar primeras2 páginas</button>
+ </form>
+ <form asp-controller="Admin" asp-action="WipeReservas" method="post" onsubmit="return confirm('¿Eliminar TODAS las reservas, sus detalles, servicios, facturas y transacciones?');">
+ <button type="submit" class="btn btn-outline-warning btn-sm">Eliminar TODAS las reservas</button>
+ </form>
+ </div>
+
  <div class="table-responsive">
  <table class="table table-striped align-middle">
  <thead>
  <tr>
- <th>Foto</th>
+ <th>Nombre</th>
  <th>Número</th>
  <th>Piso</th>
  <th>Tipo</th>
@@ -57,14 +69,9 @@
  <tbody>
  @foreach (var item in Model)
  {
- var img = item.Tipo switch {
- TipoHabitacion.Simple => "/img/hab/simple1.jpg",
- TipoHabitacion.Doble => "/img/hab/doble1.jpg",
- TipoHabitacion.Suite => "/img/hab/suite1.jpg",
- _ => "/img/placeholder.png"
- };
+ var nombre = (nombres.TryGetValue(item.Id, out var nom) && !string.IsNullOrWhiteSpace(nom)) ? nom : (item.RegistradoNombreCompleto ?? "");
  <tr>
- <td><img src="@img" alt="@item.Tipo" width="80" class="rounded"/></td>
+ <td>@nombre</td>
  <td>@item.Numero</td>
  <td>@item.Piso</td>
  <td>@item.Tipo</td>

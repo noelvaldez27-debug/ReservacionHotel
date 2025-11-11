@@ -3,6 +3,23 @@
 }
 <div class="container mt-4">
  <h2>Dashboard</h2>
+
+ @if (TempData["Success"] != null)
+ {
+ <div class="alert alert-success">@TempData["Success"]</div>
+ }
+ @if (TempData["Error"] != null)
+ {
+ <div class="alert alert-danger">@TempData["Error"]</div>
+ }
+
+ <div class="mb-3">
+ <form asp-action="WipeReservas" method="post" onsubmit="return confirm('¿Eliminar TODAS las reservas, sus detalles, servicios, facturas y transacciones? Esta acción no se puede deshacer.');">
+ <button type="submit" class="btn btn-danger">Eliminar todas las reservas</button>
+ </form>
+ <small class="text-muted">Reservas actuales: @ViewBag.ReservasCount</small>
+ </div>
+
  <div class="row g-3">
  <div class="col-md-4">
  <div class="card text-bg-primary">
