@@ -103,6 +103,11 @@ internal class Program
  app.UseAuthorization();
 
  app.MapControllerRoute(
+ name: "reservas_root",
+ pattern: "Reservas",
+ defaults: new { controller = "Reservas", action = "Index" });
+
+ app.MapControllerRoute(
  name: "default",
  pattern: "{controller=Home}/{action=Index}/{id?}");
  app.MapRazorPages();

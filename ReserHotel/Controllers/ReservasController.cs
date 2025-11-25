@@ -233,7 +233,7 @@ public class ReservasController : Controller
  FechaReserva = DateTime.UtcNow,
  FechaEntrada = model.FechaEntrada.Date,
  FechaSalida = model.FechaSalida.Date,
- Estado = EstadoReserva.Pendiente,
+ Estado = EstadoReserva.Pendiente, // ocupada provisionalmente
  ClienteId = huesped.Id
  };
  await _uow.Reservas.AddAsync(reserva, ct);
@@ -279,7 +279,7 @@ public class ReservasController : Controller
 
  await _uow.CommitAsync(ct);
  TempData["Success"] = "Reserva creada. Número: " + reserva.NumeroReserva;
- return RedirectToAction("Search");
+ return RedirectToAction("Search", new { FechaEntrada = model.FechaEntrada.ToString("yyyy-MM-dd"), FechaSalida = model.FechaSalida.ToString("yyyy-MM-dd") });
  }
  catch
  {
@@ -291,60 +291,45 @@ public class ReservasController : Controller
  [HttpGet]
  public async Task<IActionResult> Search([FromQuery] ReservaSearchFilters filtros, CancellationToken ct)
  {
- var vm = new ReservaSearchViewModel { Filtros = filtros };
-
- // Validación fechas
- if (filtros.FechaEntrada.HasValue && filtros.FechaSalida.HasValue)
- {
+ if (!filtros.FechaEntrada.HasValue) filtros.FechaEntrada = DateTime.Today;
+ if (!filtros.FechaSalida.HasValue) filtros.FechaSalida = DateTime.Today.AddDays(1);
  if (filtros.FechaSalida <= filtros.FechaEntrada)
  ModelState.AddModelError("Filtros.FechaSalida", "La fecha de salida debe ser mayor que la de entrada.");
- }
 
- // Datos base
+ var vm = new ReservaSearchViewModel { Filtros = filtros };
  var hoteles = (await _uow.Hoteles.GetAll(ct)).ToList();
+ vm.Hoteles = hoteles;
  var habitaciones = (await _uow.Habitaciones.GetAll(ct)).ToList();
+ if (filtros.HotelId.HasValue)
+ habitaciones = habitaciones.Where(h => h.HotelId == filtros.HotelId.Value).ToList();
+ if (filtros.Tipo.HasValue)
+ habitaciones = habitaciones.Where(h => h.Tipo == filtros.Tipo.Value).ToList();
+ vm.HabitacionesDisponiblesSelect = habitaciones;
  var reservas = (await _uow.Reservas.GetAll(ct)).ToList();
  var detalles = (await _uow.DetallesReserva.GetAll(ct)).ToList();
  var tarifas = (await _uow.TarifasHabitacion.GetAll(ct)).ToList();
  var servicios = (await _uow.ServiciosAdicionales.GetAll(ct)).ToList();
-
- // Filtros por hotel/ubicación/capacidad
  if (filtros.HotelId.HasValue)
+ vm.ServiciosHeader = servicios.Where(s => s.HotelId == filtros.HotelId.Value)
+ .Select(s => new ServicioConPrecio { Nombre = s.Nombre.ToString(), Precio = s.Precio }).ToList();
+ else
  {
- habitaciones = habitaciones.Where(h => h.HotelId == filtros.HotelId.Value).ToList();
- hoteles = hoteles.Where(h => h.Id == filtros.HotelId.Value).ToList();
+ // Si no se seleccionó hotel, mostrar listado genérico (una vez por tipo) con los precios base
+ vm.ServiciosHeader = servicios
+ .GroupBy(s => s.Nombre)
+ .Select(g => new ServicioConPrecio { Nombre = g.Key.ToString(), Precio = g.First().Precio })
+ .OrderBy(x => x.Nombre)
+ .ToList();
  }
- else if (!string.IsNullOrWhiteSpace(filtros.Ubicacion))
- {
- var ubic = filtros.Ubicacion.Trim().ToLowerInvariant();
- var hotelIds = hoteles.Where(h => (h.Ubicacion ?? string.Empty).ToLowerInvariant().Contains(ubic)).Select(h => h.Id).ToHashSet();
- habitaciones = habitaciones.Where(h => hotelIds.Contains(h.HotelId)).ToList();
- hoteles = hoteles.Where(h => hotelIds.Contains(h.Id)).ToList();
- }
- if (filtros.CantidadHuespedes.HasValue && filtros.CantidadHuespedes.Value >0)
- habitaciones = habitaciones.Where(h => h.Capacidad >= filtros.CantidadHuespedes.Value).ToList();
-
- // Nuevos filtros SoloJacuzzi / SoloWifi
- if (filtros.SoloJacuzzi)
- habitaciones = habitaciones.Where(TieneJacuzzi).ToList();
- if (filtros.SoloWifi)
- habitaciones = habitaciones.Where(TieneWifi).ToList();
-
- // Índices
  var reservasPorHab = detalles.GroupBy(d => d.HabitacionId).ToDictionary(g => g.Key, g => g.Select(d => reservas.First(r => r.Id == d.ReservaId)).ToList());
  var serviciosPorHotel = servicios.GroupBy(s => s.HotelId).ToDictionary(g => g.Key, g => g.ToList());
-
- if (filtros.FechaEntrada.HasValue && filtros.FechaSalida.HasValue && ModelState.IsValid)
- {
- var fe = filtros.FechaEntrada.Value.Date;
- var fs = filtros.FechaSalida.Value.Date;
- var noches = (int)Math.Ceiling((fs - fe).TotalDays);
+ if (!ModelState.IsValid) return View(vm);
+ var fe = filtros.FechaEntrada!.Value.Date; var fs = filtros.FechaSalida!.Value.Date; var noches = (int)Math.Ceiling((fs - fe).TotalDays);
  if (noches <1)
  {
  ModelState.AddModelError("Filtros.FechaSalida", "El rango debe ser de al menos una noche.");
+ return View(vm);
  }
- else
- {
  foreach (var hab in habitaciones)
  {
  var lista = reservasPorHab.TryGetValue(hab.Id, out var l) ? l : new List<Reserva>();
@@ -355,7 +340,6 @@ public class ReservasController : Controller
  vm.Ocupadas.Add(new OccupiedRoomItem { Habitacion = hab, Hotel = hoteles.First(h => h.Id == hab.HotelId), DisponibleDesde = proximaSalida });
  continue;
  }
-
  var nightly = new List<decimal>(noches);
  for (var day = fe; day < fs; day = day.AddDays(1))
  {
@@ -364,17 +348,13 @@ public class ReservasController : Controller
  var t = tarifas.FirstOrDefault(t => t.HotelId == hab.HotelId && t.TipoHabitacion == hab.Tipo && t.Temporada == temporada);
  if (t == null) { nightly.Clear(); break; }
  var precioBase = t.PrecioBase * (1 + (t.VariacionPorcentaje /100m));
- if (TieneJacuzzi(hab)) precioBase *= (1 + RecargoJacuzziPorcentaje); // recargo jacuzzi
+ if (TieneJacuzzi(hab)) precioBase *= (1 + RecargoJacuzziPorcentaje);
  nightly.Add(precioBase);
  }
  if (nightly.Count != noches) continue;
- var precioTotal = nightly.Sum();
- var precioProm = nightly.Average();
- if (filtros.PrecioMax.HasValue && precioProm > filtros.PrecioMax.Value) continue;
-
+ var precioTotal = nightly.Sum(); var precioProm = nightly.Average();
  var servs = serviciosPorHotel.TryGetValue(hab.HotelId, out var listaServ) ? listaServ : new List<ServicioAdicional>();
  var serviciosConPrecio = servs.Select(s => new ServicioConPrecio { Nombre = s.Nombre.ToString(), Precio = s.Precio }).ToList();
-
  vm.Resultados.Add(new ReservaSearchResultItem
  {
  Habitacion = hab,
@@ -387,20 +367,11 @@ public class ReservasController : Controller
  ServiciosAdicionales = serviciosConPrecio
  });
  }
- }
- }
- else
+ if (vm.Resultados.Any())
  {
- // Si no hay fechas, igualmente listar ocupadas por información
- foreach (var hab in habitaciones)
- {
- var lista = reservasPorHab.TryGetValue(hab.Id, out var l) ? l : new List<Reserva>();
- var proximaSalida = lista.OrderBy(r => r.FechaSalida).LastOrDefault()?.FechaSalida.Date;
- if (proximaSalida.HasValue)
- vm.Ocupadas.Add(new OccupiedRoomItem { Habitacion = hab, Hotel = hoteles.First(h => h.Id == hab.HotelId), DisponibleDesde = proximaSalida.Value });
+ vm.HeaderPrecioPorNoche = vm.Resultados.First().PrecioPorNochePromedio;
+ vm.HeaderNoches = vm.Resultados.First().Noches;
  }
- }
-
  return View(vm);
  }
 
@@ -418,9 +389,34 @@ public class ReservasController : Controller
  _uow.Reservas.Update(reserva);
  await _uow.Reservas.SaveChangesAsync(ct);
 
+ // Registrar datos del huésped dentro de la habitación automáticamente
+ var huesped = (await _uow.Huespedes.GetAll(ct)).FirstOrDefault(h => h.Id == reserva.ClienteId);
+ var detalle = (await _uow.DetallesReserva.GetAll(ct)).FirstOrDefault(d => d.ReservaId == reserva.Id);
+ if (detalle != null)
+ {
+ var habitacion = await _uow.Habitaciones.GetByIdAsync(detalle.HabitacionId, ct);
+ if (habitacion != null && huesped != null)
+ {
+ habitacion.RegistradoNombreCompleto = huesped.NombreCompleto;
+ habitacion.RegistradoDni = huesped.Documento;
+ habitacion.RefEntrada = reserva.FechaEntrada;
+ habitacion.RefSalida = reserva.FechaSalida;
+ habitacion.RefNoches = detalle.CantidadNoches;
+ habitacion.RefSubtotalHabitacion = detalle.PrecioTotal;
+ // cálculo rápido de servicios contratados
+ var serviciosReserva = (await _uow.ReservaServicios.GetAll(ct)).Where(rs => rs.ReservaId == reserva.Id).ToList();
+ var serviciosAd = (await _uow.ServiciosAdicionales.GetAll(ct)).Where(s => serviciosReserva.Any(rs => rs.ServicioId == s.Id)).ToList();
+ habitacion.RefSubtotalServicios = serviciosAd.Sum(s => s.Precio);
+ habitacion.RefTotal = (habitacion.RefSubtotalHabitacion ??0) + (habitacion.RefSubtotalServicios ??0);
+ habitacion.RefServiciosJson = string.Join(",", serviciosAd.Select(s => s.Nombre.ToString()));
+ _uow.Habitaciones.Update(habitacion);
+ await _uow.Habitaciones.SaveChangesAsync(ct);
+ }
+ }
+
  _ = Task.Run(() => Console.WriteLine($"Check-in confirmado. Código de acceso: {reserva.CodigoAcceso}"));
  TempData["Success"] = "Check-in realizado";
- return RedirectToAction("Search");
+ return RedirectToAction("Search", new { FechaEntrada = reserva.FechaEntrada.ToString("yyyy-MM-dd"), FechaSalida = reserva.FechaSalida.ToString("yyyy-MM-dd") });
  }
 
  [HttpPost]
@@ -497,7 +493,123 @@ public class ReservasController : Controller
 
  _ = Task.Run(() => Console.WriteLine($"Reserva cancelada. Reembolso aplicado: {porcentaje:P0}"));
  TempData["Success"] = "Reserva cancelada";
+ return RedirectToAction("Search", new { FechaEntrada = reserva.FechaEntrada.ToString("yyyy-MM-dd"), FechaSalida = reserva.FechaSalida.ToString("yyyy-MM-dd") });
+ }
+
+ [HttpGet]
+ public IActionResult QuickReserve()
+ {
  return RedirectToAction("Search");
+ }
+
+ [HttpPost]
+ [ValidateAntiForgeryToken]
+ public async Task<IActionResult> QuickReserve(QuickReserveDto dto, CancellationToken ct)
+ {
+ if (dto.FechaEntrada == default) dto.FechaEntrada = DateTime.Today;
+ if (dto.FechaSalida == default) dto.FechaSalida = DateTime.Today.AddDays(1);
+ if (dto.FechaSalida <= dto.FechaEntrada)
+ {
+ TempData["Error"] = "La fecha de salida debe ser posterior a la de entrada";
+ return RedirectToAction("Search", new { FechaEntrada = dto.FechaEntrada.ToString("yyyy-MM-dd"), FechaSalida = dto.FechaSalida.ToString("yyyy-MM-dd") });
+ }
+ var habitacion = await _uow.Habitaciones.GetByIdAsync(dto.HabitacionId, ct);
+ if (habitacion == null)
+ {
+ TempData["Error"] = "Habitación no encontrada";
+ return RedirectToAction("Search");
+ }
+ // Chequear solapamiento
+ var reservas = await _uow.Reservas.GetAll(ct);
+ var detalles = await _uow.DetallesReserva.GetAll(ct);
+ var reservasHab = detalles.Where(d => d.HabitacionId == habitacion.Id)
+ .Join(reservas, d => d.ReservaId, r => r.Id, (d, r) => r)
+ .Where(r => r.Estado != EstadoReserva.Cancelada);
+ bool overlap = reservasHab.Any(r => dto.FechaEntrada.Date < r.FechaSalida.Date && r.FechaEntrada.Date < dto.FechaSalida.Date);
+ if (overlap)
+ {
+ TempData["Error"] = "La habitación está ocupada en el rango seleccionado";
+ return RedirectToAction("Search", new { FechaEntrada = dto.FechaEntrada.ToString("yyyy-MM-dd"), FechaSalida = dto.FechaSalida.ToString("yyyy-MM-dd") });
+ }
+ // Huesped
+ var huesped = (await _uow.Huespedes.GetAll(ct)).FirstOrDefault(h => h.Documento == dto.Documento);
+ if (huesped == null)
+ {
+ huesped = new Huesped
+ {
+ Documento = dto.Documento ?? Guid.NewGuid().ToString("N").Substring(0,8),
+ NombreCompleto = dto.NombreCompleto ?? "Invitado",
+ Email = dto.Email,
+ Telefono = dto.Telefono,
+ Pais = dto.Pais ?? "-",
+ FechaRegistro = DateTime.UtcNow
+ };
+ await _uow.Huespedes.AddAsync(huesped, ct);
+ await _uow.Huespedes.SaveChangesAsync(ct);
+ }
+ // Calcular subtotal habitación
+ var tarifas = await _uow.TarifasHabitacion.GetAll(ct);
+ decimal subtotalHab =0m;
+ for (var d = dto.FechaEntrada.Date; d < dto.FechaSalida.Date; d = d.AddDays(1))
+ {
+ var esAlta = (d.Month ==1 || d.Month ==7 || d.Month ==8 || d.Month ==12);
+ var temporada = esAlta ? Temporada.Alta : Temporada.Baja;
+ var tarifa = tarifas.FirstOrDefault(t => t.HotelId == habitacion.HotelId && t.TipoHabitacion == habitacion.Tipo && t.Temporada == temporada);
+ if (tarifa == null)
+ {
+ TempData["Error"] = "No hay tarifa disponible";
+ return RedirectToAction("Search");
+ }
+ var precioBase = tarifa.PrecioBase * (1 + tarifa.VariacionPorcentaje /100m);
+ if (TieneJacuzzi(habitacion)) precioBase *= (1 + RecargoJacuzziPorcentaje);
+ subtotalHab += precioBase;
+ }
+ var serviciosHotel = (await _uow.ServiciosAdicionales.GetAll(ct)).Where(s => s.HotelId == habitacion.HotelId).ToList();
+ var serviciosSeleccionados = new List<NombreServicio>();
+ if (dto.Desayuno) serviciosSeleccionados.Add(NombreServicio.Desayuno);
+ if (dto.Spa) serviciosSeleccionados.Add(NombreServicio.Spa);
+ if (dto.Estacionamiento) serviciosSeleccionados.Add(NombreServicio.Estacionamiento);
+ if (dto.LateCheckout) serviciosSeleccionados.Add(NombreServicio.LateCheckout);
+ await _uow.BeginTransactionAsync(ct);
+ try
+ {
+ var reserva = new Reserva
+ {
+ NumeroReserva = GenerateNumeroReserva(),
+ FechaReserva = DateTime.UtcNow,
+ FechaEntrada = dto.FechaEntrada.Date,
+ FechaSalida = dto.FechaSalida.Date,
+ Estado = EstadoReserva.Pendiente,
+ ClienteId = huesped.Id
+ };
+ await _uow.Reservas.AddAsync(reserva, ct);
+ await _uow.Reservas.SaveChangesAsync(ct);
+ await _uow.DetallesReserva.AddAsync(new DetalleReserva
+ {
+ ReservaId = reserva.Id,
+ HabitacionId = habitacion.Id,
+ CantidadNoches = (int)(dto.FechaSalida.Date - dto.FechaEntrada.Date).TotalDays,
+ PrecioTotal = subtotalHab
+ }, ct);
+ await _uow.DetallesReserva.SaveChangesAsync(ct);
+ foreach (var s in serviciosHotel.Where(s => serviciosSeleccionados.Contains(s.Nombre)))
+ {
+ await _uow.ReservaServicios.AddAsync(new ReservaServicio { ReservaId = reserva.Id, ServicioId = s.Id, Cantidad =1, PrecioUnitario = s.Precio }, ct);
+ }
+ await _uow.ReservaServicios.SaveChangesAsync(ct);
+ var subtotalServ = serviciosHotel.Where(s => serviciosSeleccionados.Contains(s.Nombre)).Sum(s => s.Precio);
+ await _uow.Facturas.AddAsync(new Factura { ReservaId = reserva.Id, MontoTotal = subtotalHab + subtotalServ, EstadoPago = EstadoPago.Pendiente }, ct);
+ await _uow.Facturas.SaveChangesAsync(ct);
+ await _uow.CommitAsync(ct);
+ TempData["Success"] = "Reserva rápida creada";
+ return RedirectToAction("Index");
+ }
+ catch
+ {
+ await _uow.RollbackAsync(ct);
+ TempData["Error"] = "Error al crear reserva";
+ return RedirectToAction("Search");
+ }
  }
 
  private static string GenerateAccessCode() => Random.Shared.Next(100000,999999).ToString();
@@ -515,4 +627,52 @@ public class ReservasController : Controller
  TipoHabitacion.Suite => new[] { "/img/hab/suite1.jpg", "/img/hab/suite2.jpg", "/img/hab/suite3.jpg" },
  _ => Array.Empty<string>()
  };
+
+ [HttpGet]
+ public async Task<IActionResult> Index(CancellationToken ct)
+ {
+ var reservas = (await _uow.Reservas.GetAll(ct)).ToList();
+ var detalles = (await _uow.DetallesReserva.GetAll(ct)).ToList();
+ var habitaciones = (await _uow.Habitaciones.GetAll(ct)).ToList();
+ var hoteles = (await _uow.Hoteles.GetAll(ct)).ToList();
+ var huespedes = (await _uow.Huespedes.GetAll(ct)).ToList();
+ var facturas = (await _uow.Facturas.GetAll(ct)).ToList();
+ var list = reservas.OrderByDescending(r => r.FechaReserva).Select(r =>
+ {
+ var det = detalles.FirstOrDefault(d => d.ReservaId == r.Id);
+ var hab = det != null ? habitaciones.FirstOrDefault(h => h.Id == det.HabitacionId) : null;
+ var hotel = hab != null ? hoteles.FirstOrDefault(h => h.Id == hab.HotelId) : null;
+ var huésped = huespedes.FirstOrDefault(h => h.Id == r.ClienteId);
+ var total = facturas.FirstOrDefault(f => f.ReservaId == r.Id)?.MontoTotal ??0m;
+ var noches = det?.CantidadNoches ??0;
+ return new ReservaListItem { Reserva = r, Habitacion = hab, Hotel = hotel, Huesped = huésped, Total = total, Noches = noches };
+ }).ToList();
+ return View(list);
+ }
+}
+
+public class QuickReserveDto
+{
+ public int HabitacionId { get; set; }
+ public DateTime FechaEntrada { get; set; }
+ public DateTime FechaSalida { get; set; }
+ public string? Documento { get; set; }
+ public string? NombreCompleto { get; set; }
+ public string? Email { get; set; }
+ public string? Telefono { get; set; }
+ public string? Pais { get; set; }
+ public bool Desayuno { get; set; }
+ public bool Spa { get; set; }
+ public bool Estacionamiento { get; set; }
+ public bool LateCheckout { get; set; }
+}
+
+public class ReservaListItem
+{
+ public Reserva Reserva { get; set; } = null!;
+ public Habitacion? Habitacion { get; set; }
+ public Hotel? Hotel { get; set; }
+ public Huesped? Huesped { get; set; }
+ public int Noches { get; set; }
+ public decimal Total { get; set; }
 }

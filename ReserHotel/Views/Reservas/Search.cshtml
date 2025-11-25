@@ -1,55 +1,89 @@
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @model ReserHotel.Models.ViewModels.ReservaSearchViewModel
 @{
- ViewData["Title"] = "Buscar Disponibilidad";
+ ViewData["Title"] = "Crear Reserva";
  var filtros = Model.Filtros;
 }
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/%40eonasdan/tempus-dominus@6.9.7/dist/css/tempus-dominus.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
 <div class="container mt-4">
- <h2>Buscar Disponibilidad</h2>
+ <h2>Crear Reserva</h2>
 
- <form method="get" class="row g-3">
+ <!-- Form principal ahora reserva rápida -->
+ <form asp-action="QuickReserve" asp-controller="Reservas" method="post" class="row g-3 align-items-end" id="headerReserveForm">
+ @Html.AntiForgeryToken()
+ <input type="hidden" name="HabitacionId" id="hdrHabitacionId" value="0" />
+ <div class="col-md-3">
+ <label class="form-label">Hotel</label>
+ <select name="HotelId" id="hdrHotel" class="form-select">
+ <option value="">-- Todos --</option>
+ @foreach (var h in Model.Hoteles)
+ {
+ <option value="@h.Id" selected="@(filtros.HotelId == h.Id ? "selected" : null)">@h.Nombre</option>
+ }
+ </select>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Tipo Habitación</label>
+ <select class="form-select" name="Tipo" id="hdrTipo">
+ <option value="">-- Cualquiera --</option>
+ @foreach (HotelSystem.Domain.Entities.TipoHabitacion tipo in Enum.GetValues(typeof(HotelSystem.Domain.Entities.TipoHabitacion)))
+ {
+ <option value="@tipo" selected="@(filtros.Tipo == tipo ? "selected" : null)">@tipo</option>
+ }
+ </select>
+ </div>
  <div class="col-md-3">
  <label class="form-label">Entrada</label>
- <div class="input-group" id="dtEntrada" data-td-target-input="nearest" data-td-target-toggle="nearest">
- <input class="form-control" id="fechaEntrada" name="FechaEntrada" type="text" value="@filtros.FechaEntrada?.ToString("yyyy-MM-dd")" data-td-target="#dtEntrada" />
- <span class="input-group-text" data-td-target="#dtEntrada" data-td-toggle="datetimepicker"><i class="bi bi-calendar"></i></span>
- </div>
+ <input class="form-control" id="hdrFechaEntrada" name="FechaEntrada" type="date" value="@filtros.FechaEntrada?.ToString("yyyy-MM-dd")" />
  </div>
  <div class="col-md-3">
  <label class="form-label">Salida</label>
- <div class="input-group" id="dtSalida" data-td-target-input="nearest" data-td-target-toggle="nearest">
- <input class="form-control" id="fechaSalida" name="FechaSalida" type="text" value="@filtros.FechaSalida?.ToString("yyyy-MM-dd")" data-td-target="#dtSalida" />
- <span class="input-group-text" data-td-target="#dtSalida" data-td-toggle="datetimepicker"><i class="bi bi-calendar"></i></span>
- </div>
- </div>
- <div class="col-md-2">
- <label class="form-label">Huéspedes</label>
- <input class="form-control" name="CantidadHuespedes" type="number" min="1" value="@filtros.CantidadHuespedes" />
- </div>
- <div class="col-md-2">
- <label class="form-label">Precio máx.</label>
- <input class="form-control" name="PrecioMax" type="number" min="0" step="0.01" value="@filtros.PrecioMax" />
- </div>
- <div class="col-md-2">
- <label class="form-label">Hotel/Ubicación</label>
- <input class="form-control" name="Ubicacion" type="text" value="@filtros.Ubicacion" placeholder="Ciudad u hotel" />
+ <input class="form-control" id="hdrFechaSalida" name="FechaSalida" type="date" value="@filtros.FechaSalida?.ToString("yyyy-MM-dd")" />
  </div>
  <div class="col-md-4">
- <label class="form-label">Comodidades (coma)</label>
- <input class="form-control" name="Comodidades" type="text" value="@filtros.Comodidades" placeholder="wifi, desayuno" />
+ <label class="form-label">Nombre Completo</label>
+ <input class="form-control" name="NombreCompleto" value="@filtros.NombreCompleto" />
  </div>
- <div class="col-md-2 form-check align-self-end">
- <input class="form-check-input" type="checkbox" id="SoloJacuzzi" name="SoloJacuzzi" @(filtros.SoloJacuzzi ? "checked" : "") />
- <label class="form-check-label" for="SoloJacuzzi">Solo jacuzzi</label>
+ <div class="col-md-4">
+ <label class="form-label">Documento</label>
+ <input class="form-control" name="Documento" value="@filtros.Documento" />
  </div>
- <div class="col-md-2 form-check align-self-end">
- <input class="form-check-input" type="checkbox" id="SoloWifi" name="SoloWifi" @(filtros.SoloWifi ? "checked" : "") />
- <label class="form-check-label" for="SoloWifi">Solo wifi</label>
+ <div class="col-md-4">
+ <label class="form-label">País</label>
+ <input class="form-control" name="Pais" value="@filtros.Pais" />
  </div>
- <div class="col-12">
- <button class="btn btn-primary" type="submit">Buscar</button>
+ <div class="col-md-6">
+ <label class="form-label">Servicios deseados</label>
+ <div class="d-flex flex-wrap gap-3">
+ @foreach (var s in Model.ServiciosHeader)
+ {
+ var id = $"fSrv_{s.Nombre}";
+ <div class="form-check">
+ <input class="form-check-input hdr-servicio" type="checkbox" id="@id" data-precio="@s.Precio" name="@s.Nombre" value="true" @(s.Nombre=="Desayuno" && filtros.Desayuno?"checked":"") @(s.Nombre=="Spa" && filtros.Spa?"checked":"") @(s.Nombre=="Estacionamiento" && filtros.Estacionamiento?"checked":"") @(s.Nombre=="LateCheckout" && filtros.LateCheckout?"checked":"") />
+ <label class="form-check-label" for="@id">@s.Nombre (@("US$" + s.Precio.ToString("0.00")))</label>
+ </div>
+ }
+ </div>
+ <small class="text-muted">Marque o desmarque para ver el precio total estimado en tiempo real.</small>
+ <div class="card mt-2">
+ <div class="card-body py-2">
+ <div class="mb-1"><strong>Noches</strong> <span class="float-end hdr-nights">0</span></div>
+ <div class="mb-1"><strong>Subtotal habitación</strong> <span class="float-end hdr-subhab">US$0.00</span></div>
+ <div class="mb-2"><strong>Servicios</strong> <span class="float-end hdr-servicios">US$0.00</span></div>
+ <ul class="small mb-2 hdr-servicios-list list-unstyled"></ul>
+ <hr class="my-2" />
+ <div class="mb-1"><strong>Total estimado</strong> <span class="float-end hdr-total">US$0.00</span></div>
+ <small class="text-muted d-block">Tarifa dinámica según fechas, tipo y amenities.</small>
+ </div>
+ </div>
+ </div>
+ <!-- Hidden flags for servicios (actualizados por script) -->
+ <input type="hidden" name="Desayuno" value="false" />
+ <input type="hidden" name="Spa" value="false" />
+ <input type="hidden" name="Estacionamiento" value="false" />
+ <input type="hidden" name="LateCheckout" value="false" />
+ <div class="col-12 d-flex align-items-center gap-2">
+ <button class="btn btn-success" type="submit">Reservar ahora</button>
+ <a class="btn btn-outline-info" href="@Url.Action("Index","Reservas")">Reservas</a>
  </div>
  </form>
 
@@ -95,13 +129,74 @@
  }
  </ul>
  </div>
- <div class="mt-2">
- <a class="btn btn-success"
- asp-controller="Reservas"
- asp-action="Create"
- asp-route-habitacionId="@r.Habitacion.Id"
- asp-route-fechaEntrada="@(Model.Filtros.FechaEntrada?.ToString("yyyy-MM-dd"))"
- asp-route-fechaSalida="@(Model.Filtros.FechaSalida?.ToString("yyyy-MM-dd"))">Reservar</a>
+
+ <button class="btn btn-sm btn-outline-success mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#frmRes_@r.Habitacion.Id">Reservar ahora</button>
+ <div id="frmRes_@r.Habitacion.Id" class="collapse">
+ <form asp-controller="Reservas" asp-action="Create" method="post" class="border rounded p-3 bg-light reserva-form" data-nightly="@r.PrecioPorNochePromedio" data-habitacion="@r.Habitacion.Id">
+ @Html.AntiForgeryToken()
+ <input type="hidden" name="HabitacionId" value="@r.Habitacion.Id" />
+ <div class="row g-3">
+ <div class="col-md-3">
+ <label class="form-label">Entrada</label>
+ <input type="date" class="form-control res-fecha-entrada" name="FechaEntrada" value="@Model.Filtros.FechaEntrada?.ToString("yyyy-MM-dd")" />
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Salida</label>
+ <input type="date" class="form-control res-fecha-salida" name="FechaSalida" value="@Model.Filtros.FechaSalida?.ToString("yyyy-MM-dd")" />
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">Servicios del hotel</label>
+ <div class="d-flex flex-wrap gap-3">
+ @foreach (var s in r.ServiciosAdicionales)
+ {
+ var idSrv = $"srv_{r.Habitacion.Id}_{s.Nombre}";
+ <div class="form-check">
+ <input class="form-check-input res-servicio" type="checkbox" name="@s.Nombre" id="@idSrv" value="true" data-precio="@s.Precio" />
+ <label class="form-check-label" for="@idSrv">@s.Nombre (@s.Precio.ToString("C"))</label>
+ </div>
+ }
+ </div>
+ <small class="text-muted">Marque o desmarque para ver el precio total estimado en tiempo real.</small>
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">Documento</label>
+ <input name="Documento" class="form-control" value="@filtros.Documento" required />
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">Nombre Completo</label>
+ <input name="NombreCompleto" class="form-control" value="@filtros.NombreCompleto" required />
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">Email</label>
+ <input name="Email" type="email" class="form-control" />
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">Teléfono</label>
+ <input name="Telefono" class="form-control" />
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">País</label>
+ <input name="Pais" class="form-control" value="@filtros.Pais" required />
+ </div>
+ <div class="col-md-6">
+ <div class="card shadow-sm">
+ <div class="card-body py-2">
+ <div class="mb-1"><strong>Noches</strong> <span class="float-end res-nights">0</span></div>
+ <div class="mb-1"><strong>Subtotal habitación</strong> <span class="float-end res-subhab">US$0.00</span></div>
+ <div class="mb-2"><strong>Servicios</strong> <span class="float-end res-servicios">US$0.00</span></div>
+ <ul class="small mb-2 res-servicios-list list-unstyled"></ul>
+ <hr class="my-2" />
+ <div class="mb-1"><strong>Total estimado</strong> <span class="float-end res-total">US$0.00</span></div>
+ <small class="text-muted d-block">Se usa tarifa promedio calculada. El total final puede variar por temporada y recargos.</small>
+ </div>
+ </div>
+ </div>
+ <div class="col-12 text-end">
+ <button type="submit" class="btn btn-success btn-sm">Confirmar reserva</button>
+ </div>
+ </div>
+ </form>
+ <small class="text-muted">La reserva queda pendiente hasta el check-in. Puede cancelarse para liberar la habitación.</small>
  </div>
  </div>
  </div>
@@ -113,7 +208,6 @@
  {
  <div class="alert alert-info">No hay resultados.</div>
  }
- </div>
  </div>
  <div class="col-md-5">
  <h4>Ocupadas</h4>
@@ -143,11 +237,59 @@
 </div>
 
 @section Scripts{
- <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
- <script src="https://cdn.jsdelivr.net/npm/%40eonasdan/tempus-dominus@6.9.7/dist/js/tempus-dominus.min.js"></script>
  <script>
- const pickerIn = new tempusDominus.TempusDominus(document.getElementById('dtEntrada'), { display: { components: { decades: false, year: true, month: true, date: true, hours: false, minutes: false } } });
- const pickerOut = new tempusDominus.TempusDominus(document.getElementById('dtSalida'), { display: { components: { decades: false, year: true, month: true, date: true, hours: false, minutes: false } } });
- GLightbox({ selector: '.glightbox' });
+ function formatUSD(amount){ return 'US$' + amount.toFixed(2); }
+ function parseDate(val){ if(!val) return null; const parts = val.split('-'); if(parts.length===3){ return new Date(parts[0], parts[1]-1, parts[2]); } return null; }
+ let nightlyBase = parseFloat('@Model.HeaderPrecioPorNoche');
+ function recalcHeader(){
+ const entrada = document.getElementById('hdrFechaEntrada');
+ const salida = document.getElementById('hdrFechaSalida');
+ const nightsEl = document.querySelector('.hdr-nights');
+ const subhabEl = document.querySelector('.hdr-subhab');
+ const servEl = document.querySelector('.hdr-servicios');
+ const totalEl = document.querySelector('.hdr-total');
+ const list = document.querySelector('.hdr-servicios-list');
+ const checks = document.querySelectorAll('.hdr-servicio');
+ const fe = parseDate(entrada?.value); const fs = parseDate(salida?.value);
+ let noches =0; if(fe && fs && fs>fe){ noches = Math.round((fs-fe)/(1000*60*60*24)); }
+ let servTot =0; list.innerHTML='';
+ checks.forEach(ch=>{ if(ch.checked){ const p=parseFloat(ch.dataset.precio||'0'); servTot+=p; const li=document.createElement('li'); li.textContent = ch.nextElementSibling.textContent.split('(')[0].trim() + ' ' + formatUSD(p); list.appendChild(li);} });
+ const subtotalHab = noches * nightlyBase;
+ nightsEl.textContent = noches;
+ subhabEl.textContent = formatUSD(subtotalHab);
+ servEl.textContent = formatUSD(servTot);
+ totalEl.textContent = formatUSD(subtotalHab + servTot);
+ }
+ function syncServiceFlags(){
+ const form = document.getElementById('headerReserveForm');
+ if(!form) return;['Desayuno','Spa','Estacionamiento','LateCheckout'].forEach(n=>{ const hidden=form.querySelector('input[name="'+n+'"][type="hidden"]'); if(hidden) hidden.value='false'; });
+ document.querySelectorAll('.hdr-servicio').forEach(ch=>{ if(ch.checked){ const h=form.querySelector('input[name="'+ch.name+'"][type="hidden"]'); if(h) h.value='true'; } });
+ }
+ async function updateNightly(){
+ const fe = document.getElementById('hdrFechaEntrada')?.value;
+ const fs = document.getElementById('hdrFechaSalida')?.value;
+ const hotel = document.getElementById('hdrHotel')?.value;
+ const tipo = document.getElementById('hdrTipo')?.value;
+ if(!fe || !fs) { nightlyBase =0; recalcHeader(); return; }
+ const params = new URLSearchParams({ fechaEntrada: fe, fechaSalida: fs });
+ if(hotel) params.append('hotelId', hotel);
+ try{
+ const resp = await fetch('/Reservas/GetDisponibles?' + params.toString());
+ if(!resp.ok){ nightlyBase =0; recalcHeader(); return; }
+ const data = await resp.json();
+ // elegir la primera que coincida con el tipo seleccionado (o primera si no hay tipo)
+ let item = null;
+ if(tipo){ item = data.find(d=> d.tipo === tipo); }
+ if(!item) item = data[0];
+ nightlyBase = item ? parseFloat(item.precioPromedio) :0;
+ }catch{ nightlyBase =0; }
+ recalcHeader();
+ }
+ document.addEventListener('DOMContentLoaded', ()=>{
+ updateNightly(); syncServiceFlags();
+ document.querySelectorAll('.hdr-servicio').forEach(ch=> ch.addEventListener('change', ()=>{ syncServiceFlags(); recalcHeader(); }));
+ ['hdrFechaEntrada','hdrFechaSalida','hdrHotel','hdrTipo'].forEach(id=> document.getElementById(id)?.addEventListener('change', updateNightly));
+ });
+ document.getElementById('headerReserveForm')?.addEventListener('submit', ()=>{ syncServiceFlags(); });
  </script>
 }
