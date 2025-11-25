@@ -194,9 +194,8 @@ public class ReservasController : Controller
  {
  Documento = model.Documento,
  NombreCompleto = model.NombreCompleto,
- Email = model.Email,
  Telefono = model.Telefono,
- Pais = model.Pais,
+ Pais = "-",
  FechaRegistro = DateTime.UtcNow
  };
  await _uow.Huespedes.AddAsync(huesped, ct);
@@ -223,8 +222,7 @@ public class ReservasController : Controller
  subtotalHab += precioBase;
  }
 
- // Crear reserva, detalle y factura en transacción
- await _uow.BeginTransactionAsync(ct);
+ // Crear reserva, detalle y factura
  try
  {
  var reserva = new Reserva
@@ -233,7 +231,7 @@ public class ReservasController : Controller
  FechaReserva = DateTime.UtcNow,
  FechaEntrada = model.FechaEntrada.Date,
  FechaSalida = model.FechaSalida.Date,
- Estado = EstadoReserva.Pendiente, // ocupada provisionalmente
+ Estado = EstadoReserva.Pendiente,
  ClienteId = huesped.Id
  };
  await _uow.Reservas.AddAsync(reserva, ct);
@@ -277,14 +275,15 @@ public class ReservasController : Controller
  }, ct);
  await _uow.Facturas.SaveChangesAsync(ct);
 
- await _uow.CommitAsync(ct);
- TempData["Success"] = "Reserva creada. Número: " + reserva.NumeroReserva;
- return RedirectToAction("Search", new { FechaEntrada = model.FechaEntrada.ToString("yyyy-MM-dd"), FechaSalida = model.FechaSalida.ToString("yyyy-MM-dd") });
+ TempData["Success"] = "Reserva guardada exitosamente. Número: " + reserva.NumeroReserva;
+ return RedirectToAction("Create", new { habitacionId = model.HabitacionId, fechaEntrada = model.FechaEntrada.ToString("yyyy-MM-dd"), fechaSalida = model.FechaSalida.ToString("yyyy-MM-dd") });
  }
  catch
  {
- await _uow.RollbackAsync(ct);
- throw;
+ TempData["Error"] = "Error al crear la reserva. Intente nuevamente.";
+ model.Habitaciones = await _uow.Habitaciones.GetAll(ct);
+ model.Hoteles = await _uow.Hoteles.GetAll(ct);
+ return View(model);
  }
  }
 
@@ -539,9 +538,8 @@ public class ReservasController : Controller
  {
  Documento = dto.Documento ?? Guid.NewGuid().ToString("N").Substring(0,8),
  NombreCompleto = dto.NombreCompleto ?? "Invitado",
- Email = dto.Email,
  Telefono = dto.Telefono,
- Pais = dto.Pais ?? "-",
+ Pais = "-", // valor por defecto fijo
  FechaRegistro = DateTime.UtcNow
  };
  await _uow.Huespedes.AddAsync(huesped, ct);
@@ -570,7 +568,7 @@ public class ReservasController : Controller
  if (dto.Spa) serviciosSeleccionados.Add(NombreServicio.Spa);
  if (dto.Estacionamiento) serviciosSeleccionados.Add(NombreServicio.Estacionamiento);
  if (dto.LateCheckout) serviciosSeleccionados.Add(NombreServicio.LateCheckout);
- await _uow.BeginTransactionAsync(ct);
+ 
  try
  {
  var reserva = new Reserva
@@ -600,13 +598,12 @@ public class ReservasController : Controller
  var subtotalServ = serviciosHotel.Where(s => serviciosSeleccionados.Contains(s.Nombre)).Sum(s => s.Precio);
  await _uow.Facturas.AddAsync(new Factura { ReservaId = reserva.Id, MontoTotal = subtotalHab + subtotalServ, EstadoPago = EstadoPago.Pendiente }, ct);
  await _uow.Facturas.SaveChangesAsync(ct);
- await _uow.CommitAsync(ct);
- TempData["Success"] = "Reserva rápida creada";
- return RedirectToAction("Index");
+ 
+ TempData["Success"] = "Reserva guardada exitosamente";
+ return RedirectToAction("Search", new { FechaEntrada = dto.FechaEntrada.ToString("yyyy-MM-dd"), FechaSalida = dto.FechaSalida.ToString("yyyy-MM-dd") });
  }
  catch
  {
- await _uow.RollbackAsync(ct);
  TempData["Error"] = "Error al crear reserva";
  return RedirectToAction("Search");
  }
@@ -649,6 +646,84 @@ public class ReservasController : Controller
  }).ToList();
  return View(list);
  }
+
+ [HttpGet]
+ public async Task<IActionResult> QuickNumbersHistory(int hotelId, TipoHabitacion tipo, CancellationToken ct)
+ {
+ var habitaciones = (await _uow.Habitaciones.GetAll(ct))
+ .Where(h => h.HotelId == hotelId && h.Tipo == tipo)
+ .ToList();
+ var detalles = await _uow.DetallesReserva.GetAll(ct);
+ var reservas = await _uow.Reservas.GetAll(ct);
+ var disponibles = new List<object>();
+ var ocupadas = new List<int>();
+ foreach (var h in habitaciones)
+ {
+ var dets = detalles.Where(d => d.HabitacionId == h.Id)
+ .Join(reservas, d => d.ReservaId, r => r.Id, (d, r) => r)
+ .ToList();
+ if (dets.Any()) ocupadas.Add(h.Numero); else disponibles.Add(new { h.Id, h.Numero, h.Capacidad });
+ }
+ return Ok(new { disponibles, ocupadas });
+ }
+
+ [HttpGet]
+ public async Task<IActionResult> QuickNumbers(int hotelId, TipoHabitacion tipo, DateTime fechaEntrada, DateTime fechaSalida, CancellationToken ct)
+ {
+ if (fechaSalida <= fechaEntrada) return BadRequest("Rango inválido");
+ var habitaciones = (await _uow.Habitaciones.GetAll(ct))
+ .Where(h => h.HotelId == hotelId && h.Tipo == tipo)
+ .ToList();
+ var detalles = await _uow.DetallesReserva.GetAll(ct);
+ var reservas = await _uow.Reservas.GetAll(ct);
+ var disponibles = new List<object>();
+ var ocupadas = new List<int>();
+ foreach (var h in habitaciones)
+ {
+ // Reservas históricas (independiente de fechas seleccionadas)
+ var dets = detalles.Where(d => d.HabitacionId == h.Id)
+ .Join(reservas, d => d.ReservaId, r => r.Id, (d, r) => r)
+ .ToList();
+ bool haSidoReservada = dets.Any();
+ if (haSidoReservada) ocupadas.Add(h.Numero); else disponibles.Add(new { h.Id, h.Numero, h.Capacidad });
+ }
+ return Ok(new { disponibles, ocupadas });
+ }
+
+ [HttpGet]
+ public async Task<IActionResult> Details(int id, CancellationToken ct)
+ {
+ var reserva = await _uow.Reservas.GetByIdAsync(id, ct);
+ if (reserva == null) return NotFound();
+ var detalle = (await _uow.DetallesReserva.GetAll(ct)).FirstOrDefault(d => d.ReservaId == id);
+ var habitacion = detalle != null ? await _uow.Habitaciones.GetByIdAsync(detalle.HabitacionId, ct) : null;
+ var hotel = habitacion != null ? await _uow.Hoteles.GetByIdAsync(habitacion.HotelId, ct) : null;
+ var huesped = await _uow.Huespedes.GetByIdAsync(reserva.ClienteId, ct);
+ var factura = (await _uow.Facturas.GetAll(ct)).FirstOrDefault(f => f.ReservaId == id);
+ var vm = new ReservaListItem { Reserva = reserva, Habitacion = habitacion, Hotel = hotel, Huesped = huesped, Noches = detalle?.CantidadNoches ??0, Total = factura?.MontoTotal ??0m };
+ return View(vm);
+ }
+
+ [HttpPost]
+ [ValidateAntiForgeryToken]
+ public async Task<IActionResult> Delete(int id, CancellationToken ct)
+ {
+ var reserva = await _uow.Reservas.GetByIdAsync(id, ct);
+ if (reserva == null) return NotFound();
+ // Eliminar en cascada: detalle, servicios, factura, luego reserva
+ var detalles = (await _uow.DetallesReserva.GetAll(ct)).Where(d => d.ReservaId == id).ToList();
+ foreach (var d in detalles) { _uow.DetallesReserva.Remove(d); }
+ await _uow.DetallesReserva.SaveChangesAsync(ct);
+ var servicios = (await _uow.ReservaServicios.GetAll(ct)).Where(rs => rs.ReservaId == id).ToList();
+ foreach (var s in servicios) { _uow.ReservaServicios.Remove(s); }
+ await _uow.ReservaServicios.SaveChangesAsync(ct);
+ var factura = (await _uow.Facturas.GetAll(ct)).FirstOrDefault(f => f.ReservaId == id);
+ if (factura != null) { _uow.Facturas.Remove(factura); await _uow.Facturas.SaveChangesAsync(ct); }
+ _uow.Reservas.Remove(reserva);
+ await _uow.Reservas.SaveChangesAsync(ct);
+ TempData["Success"] = "Reserva eliminada";
+ return RedirectToAction("Index");
+ }
 }
 
 public class QuickReserveDto
@@ -658,9 +733,7 @@ public class QuickReserveDto
  public DateTime FechaSalida { get; set; }
  public string? Documento { get; set; }
  public string? NombreCompleto { get; set; }
- public string? Email { get; set; }
  public string? Telefono { get; set; }
- public string? Pais { get; set; }
  public bool Desayuno { get; set; }
  public bool Spa { get; set; }
  public bool Estacionamiento { get; set; }

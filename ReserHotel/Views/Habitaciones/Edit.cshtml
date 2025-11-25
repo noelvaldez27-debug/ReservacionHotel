@@ -3,28 +3,34 @@
 @{
  ViewData["Title"] = "Editar Habitación";
 }
-<div class="container mt-4">
+<div class="container mt-4 habitacion-form">
  <h2>Editar Habitación</h2>
- <form asp-action="Edit" method="post" class="row g-3">
+ <form asp-action="Edit" method="post" class="row g-3" id="FormEditHab">
  <input type="hidden" asp-for="Id" />
  <div class="col-md-4">
  <label asp-for="HotelId" class="form-label"></label>
- <select asp-for="HotelId" asp-items="ViewBag.Hoteles" class="form-select"></select>
+ <select asp-for="HotelId" asp-items="ViewBag.Hoteles" class="form-select" id="HotelId"></select>
  <span asp-validation-for="HotelId" class="text-danger"></span>
  </div>
  <div class="col-md-4">
- <label asp-for="Numero" class="form-label">Habitaciones disponibles</label>
- <input asp-for="Numero" class="form-control" />
+ <label for="Numero" class="form-label">Habitaciones disponibles</label>
+ <select asp-for="Numero" class="form-select" id="Numero">
+ <option value="">-- seleccione tipo y hotel --</option>
+ </select>
+ <span class="form-text">Aparecen solo números disponibles para el hotel y tipo. Se incluye la actual.</span>
  <span asp-validation-for="Numero" class="text-danger"></span>
  </div>
  <div class="col-md-4">
- <label asp-for="Piso" class="form-label"></label>
- <input asp-for="Piso" class="form-control" />
+ <label class="form-label">Habitaciones ocupadas</label>
+ <select id="Ocupadas" class="form-select" multiple disabled size="4">
+ <option>(sin datos)</option>
+ </select>
+ <input asp-for="Piso" type="hidden" id="Piso" />
  <span asp-validation-for="Piso" class="text-danger"></span>
  </div>
  <div class="col-md-4">
  <label asp-for="Tipo" class="form-label"></label>
- <select asp-for="Tipo" class="form-select" asp-items="Html.GetEnumSelectList<TipoHabitacion>()"></select>
+ <select asp-for="Tipo" class="form-select" asp-items="Html.GetEnumSelectList<TipoHabitacion>()" id="Tipo"></select>
  <span asp-validation-for="Tipo" class="text-danger"></span>
  </div>
  <div class="col-md-4">
@@ -43,7 +49,7 @@
  </div>
  <div class="col-md-4">
  <label asp-for="RegistradoDni" class="form-label"></label>
- <input asp-for="RegistradoDni" class="form-control" />
+ <input asp-for="RegistradoDni" class="form-control" inputmode="numeric" pattern="\d{1,8}" maxlength="8" id="RegistradoDni" />
  <span asp-validation-for="RegistradoDni" class="text-danger"></span>
  </div>
  </div>
@@ -51,7 +57,7 @@
 
  <div class="col-md-12">
  <label asp-for="Amenidades" class="form-label"></label>
- <textarea asp-for="Amenidades" class="form-control" rows="3"></textarea>
+ <textarea asp-for="Amenidades" class="form-control" rows="3" id="Amenidades"></textarea>
  <span asp-validation-for="Amenidades" class="text-danger"></span>
  </div>
  <div class="col-12">
@@ -62,4 +68,66 @@
 </div>
 @section Scripts{
  <partial name="_ValidationScriptsPartial" />
+ <script>
+ // Limitar DNI a8 dígitos
+ const dniInput = document.getElementById('RegistradoDni');
+ if(dniInput){
+ dniInput.addEventListener('input', ()=>{ dniInput.value = dniInput.value.replace(/[^\d]/g,'').slice(0,8); });
+ }
+ const qHotel = document.getElementById('HotelId');
+ const qTipo = document.getElementById('Tipo');
+ const qNumero = document.getElementById('Numero');
+ const qOcupadas = document.getElementById('Ocupadas');
+ const qPisoHidden = document.getElementById('Piso');
+ const currentNumero = '@Model.Numero';
+ function syncPiso(){
+ const num = parseInt(qNumero.value);
+ if(!isNaN(num)){
+ const piso = Math.floor(num /100);
+ qPisoHidden.value = isFinite(piso) ? piso : '';
+ }
+ }
+ async function cargarNumeros(){
+ const hid = qHotel.value; const tipo = qTipo.value;
+ qNumero.innerHTML = '<option value="">-- seleccione tipo y hotel --</option>';
+ qOcupadas.innerHTML = '<option>(sin datos)</option>';
+ if(!hid || !tipo){ return; }
+ const url = `@Url.Action("GetNumeros","Habitaciones")?hotelId=${hid}&tipo=${tipo}`;
+ try{
+ const res = await fetch(url);
+ if(!res.ok) return;
+ const data = await res.json();
+ // disponibles
+ qNumero.innerHTML='';
+ const disponibles = data.disponibles || [];
+ // incluir actual si no está en disponibles
+ if(currentNumero && currentNumero !== '0' && !disponibles.includes(parseInt(currentNumero))){
+ qNumero.insertAdjacentHTML('beforeend', `<option value="${currentNumero}">${currentNumero} (actual)</option>`);
+ }
+ if(disponibles.length===0 && !currentNumero){
+ qNumero.innerHTML = '<option value="">(no hay números disponibles)</option>';
+ }else{
+ if(disponibles.length){ qNumero.insertAdjacentHTML('beforeend','<option value="">-- seleccione --</option>'); }
+ disponibles.forEach(n=>{
+ const opt = document.createElement('option'); opt.value = n; opt.textContent = n; qNumero.appendChild(opt);
+ });
+ }
+ // ocupar
+ qOcupadas.innerHTML='';
+ if(data.ocupadas && data.ocupadas.length){
+ data.ocupadas.forEach(n=>{ const opt = document.createElement('option'); opt.textContent = n; qOcupadas.appendChild(opt); });
+ }else{ qOcupadas.innerHTML='<option>(ninguna)</option>'; }
+ // seleccionar actual
+ if(currentNumero){
+ const optSel = Array.from(qNumero.options).find(o=>o.value==currentNumero);
+ if(optSel){ qNumero.value = currentNumero; }
+ }
+ syncPiso();
+ }catch{/* ignore */}
+ }
+ qHotel.addEventListener('change', ()=>{ cargarNumeros(); });
+ qTipo.addEventListener('change', ()=>{ cargarNumeros(); });
+ qNumero.addEventListener('change', syncPiso);
+ cargarNumeros();
+ </script>
 }

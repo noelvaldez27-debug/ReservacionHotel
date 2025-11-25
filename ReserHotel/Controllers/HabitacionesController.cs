@@ -477,7 +477,7 @@ public class HabitacionesController : Controller
  private static IReadOnlyList<string> GetGalleryForType(TipoHabitacion tipo)
  => tipo switch
  {
- TipoHabitacion.Simple => new[] { "/img/hab/simple1.jpg", "/img/hab/simple2.jpg" },
+ TipoHabitacion.Simple => new[] { "/img/hab/simple1.jpg", "/img/hab/simple2.jpg", "/img/hab/simple-new.jpg" },
  TipoHabitacion.Doble => new[] { "/img/hab/doble1.jpg", "/img/hab/doble2.jpg" },
  TipoHabitacion.Suite => new[] { "/img/hab/suite1.jpg", "/img/hab/suite2.jpg" },
  _ => Array.Empty<string>()

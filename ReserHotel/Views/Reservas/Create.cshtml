@@ -14,7 +14,8 @@
  <div class="col-12"><h5>Datos del huésped</h5></div>
  <div class="col-md-3">
  <label asp-for="Documento" class="form-label"></label>
- <input asp-for="Documento" class="form-control" />
+ <input asp-for="Documento" class="form-control" inputmode="numeric" maxlength="8" pattern="\d{8}" />
+ <span class="form-text">8 dígitos numéricos.</span>
  <span asp-validation-for="Documento" class="text-danger"></span>
  </div>
  <div class="col-md-5">
@@ -23,89 +24,92 @@
  <span asp-validation-for="NombreCompleto" class="text-danger"></span>
  </div>
  <div class="col-md-4">
- <label asp-for="Email" class="form-label"></label>
- <input asp-for="Email" class="form-control" />
- <span asp-validation-for="Email" class="text-danger"></span>
- </div>
- <div class="col-md-4">
  <label asp-for="Telefono" class="form-label"></label>
- <input asp-for="Telefono" class="form-control" />
+ <input asp-for="Telefono" class="form-control" inputmode="numeric" maxlength="9" pattern="\d{9}" />
+ <span class="form-text">9 dígitos numéricos.</span>
  <span asp-validation-for="Telefono" class="text-danger"></span>
  </div>
+
+ <!-- Filtro rápido de habitaciones (histórico) -->
+ <div class="col-12 mt-4"><h5>Filtro rápido de habitaciones</h5></div>
  <div class="col-md-4">
- <label asp-for="Pais" class="form-label"></label>
- <input asp-for="Pais" class="form-control" />
- <span asp-validation-for="Pais" class="text-danger"></span>
+ <label class="form-label">Hotel</label>
+ <select id="QHotel" class="form-select">
+ <option value="">-- seleccionar --</option>
+ @foreach(var h in Model.Hoteles ?? Enumerable.Empty<Hotel>()){
+ <option value="@h.Id">@h.Nombre</option>
+ }
+ </select>
+ </div>
+ <div class="col-md-4">
+ <label class="form-label">Tipo</label>
+ <select id="QTipo" class="form-select">
+ <option value="">-- tipo --</option>
+ @foreach (TipoHabitacion t in Enum.GetValues(typeof(TipoHabitacion))){
+ <option value="@((int)t)">@t</option>
+ }
+ </select>
+ </div>
+ <div class="col-md-4">
+ <label class="form-label">Capacidad mínima</label>
+ <input id="QCapacidadMin" type="number" class="form-control" min="1" placeholder="Ej:2" />
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">Habitaciones disponibles</label>
+ <select id="QDisponibles" class="form-select">
+ <option value="">-- seleccione hotel y tipo --</option>
+ </select>
+ <span class="form-text">Se muestran habitaciones que nunca se reservaron.</span>
+ </div>
+ <div class="col-md-6">
+ <label class="form-label">Habitaciones ocupadas</label>
+ <select id="QOcupadas" class="form-select" multiple size="4" disabled>
+ <option>(sin datos)</option>
+ </select>
  </div>
 
- <!-- Datos requeridos de la reserva -->
+ <!-- Datos de la reserva -->
  <div class="col-12"><h5>Datos de la reserva</h5></div>
- <div class="col-md-3">
+ <div class="col-md-4">
  <label asp-for="FechaEntrada" class="form-label"></label>
- <input asp-for="FechaEntrada" class="form-control" type="date" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+ <input asp-for="FechaEntrada" class="form-control" type="date" min="@DateTime.Today.ToString("yyyy-MM-dd")" id="FechaEntrada" />
  <span asp-validation-for="FechaEntrada" class="text-danger"></span>
  </div>
- <div class="col-md-3">
+ <div class="col-md-4">
  <label asp-for="FechaSalida" class="form-label"></label>
- <input asp-for="FechaSalida" class="form-control" type="date" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" />
+ <input asp-for="FechaSalida" class="form-control" type="date" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" id="FechaSalida" />
  <span asp-validation-for="FechaSalida" class="text-danger"></span>
  </div>
- <div class="col-md-6">
- <label class="form-label">Hotel</label>
- <select asp-for="HotelId" class="form-select" asp-items="@(new SelectList(Model.Hoteles, "Id", "Nombre"))">
- <option value="">-- Seleccionar --</option>
- </select>
- <span asp-validation-for="HotelId" class="text-danger"></span>
- </div>
 
- <!-- Número de habitación seleccionado (solo lectura) -->
- <input type="hidden" asp-for="HabitacionId" />
- <div class="col-md-6">
- <label class="form-label">Número de habitación</label>
- <input id="RoomNumberSelected" class="form-control" readonly />
- </div>
+ <input type="hidden" asp-for="HabitacionId" id="HabitacionId" />
 
- <!-- Comodidades seleccionables según la habitación -->
- <div class="col-12"><h5>Comodidades de la habitación</h5></div>
- <div class="col-md-3 form-check">
- <input id="AmenNetflix" type="checkbox" class="form-check-input" checked disabled />
- <label class="form-check-label" for="AmenNetflix">Netflix</label>
- </div>
- <div class="col-md-3 form-check">
- <input id="AmenWifi" type="checkbox" class="form-check-input" disabled />
- <label class="form-check-label" for="AmenWifi">WiFi</label>
- </div>
- <div class="col-md-3 form-check">
- <input id="AmenJacuzzi" type="checkbox" class="form-check-input" disabled />
- <label class="form-check-label" for="AmenJacuzzi">Jacuzzi</label>
- </div>
- 
- <!-- Servicios adicionales contratables (del hotel) -->
+ <!-- Servicios adicionales -->
  <div class="col-12"><h5>Servicios adicionales</h5></div>
  <div class="col-12">@Html.ValidationMessage("Servicios", new { @class = "text-danger" })</div>
  <div class="col-md-3 form-check">
- <input class="form-check-input" asp-for="Desayuno" />
- <label class="form-check-label" asp-for="Desayuno">Desayuno</label>
+ <input class="form-check-input" asp-for="Desayuno" id="Desayuno" />
+ <label class="form-check-label" asp-for="Desayuno">Desayuno <span class="text-muted" id="priceDesayuno">$15.00</span></label>
  </div>
  <div class="col-md-3 form-check">
- <input class="form-check-input" asp-for="Spa" />
- <label class="form-check-label" asp-for="Spa">Spa</label>
+ <input class="form-check-input" asp-for="Spa" id="Spa" />
+ <label class="form-check-label" asp-for="Spa">Spa <span class="text-muted" id="priceSpa">$50.00</span></label>
  </div>
  <div class="col-md-3 form-check">
- <input class="form-check-input" asp-for="Estacionamiento" />
- <label class="form-check-label" asp-for="Estacionamiento">Estacionamiento</label>
+ <input class="form-check-input" asp-for="Estacionamiento" id="Estacionamiento" />
+ <label class="form-check-label" asp-for="Estacionamiento">Estacionamiento <span class="text-muted" id="priceEst">$10.00</span></label>
  </div>
  <div class="col-md-3 form-check">
- <input class="form-check-input" asp-for="LateCheckout" />
- <label class="form-check-label" asp-for="LateCheckout">Late checkout</label>
+ <input class="form-check-input" asp-for="LateCheckout" id="LateCheckout" />
+ <label class="form-check-label" asp-for="LateCheckout">Late checkout <span class="text-muted" id="priceLate">$25.00</span></label>
  </div>
 
- <!-- Resumen con totales en vivo -->
+ <!-- Resumen -->
  <div class="col-12"><h5>Resumen</h5></div>
  <div class="col-md-8">
  <div id="liveSummary" class="border rounded p-3">
  <div class="d-flex justify-content-between"><span>Noches</span><strong id="sumNoches">0</strong></div>
  <div class="d-flex justify-content-between"><span>Habitación</span><strong id="sumHabitacion">-</strong></div>
+ <div class="d-flex justify-content-between"><span>Precio por noche</span><strong id="sumPriceNight">$0.00</strong></div>
  <div class="d-flex justify-content-between"><span>Subtotal habitación</span><strong id="sumSubHab">$0.00</strong></div>
  <div class="d-flex justify-content-between"><span>Servicios</span><strong id="sumSubServ">$0.00</strong></div>
  <div class="d-flex justify-content-between"><span>Descuento</span><strong id="sumDesc">-</strong></div>
@@ -116,7 +120,6 @@
  <input class="form-check-input" type="checkbox" id="terms" required />
  <label class="form-check-label" for="terms">Acepto los términos y condiciones.</label>
  </div>
- <partial name="_PoliticaCancelacion" />
  </div>
  <div class="col-md-4">
  <div class="border rounded p-3 bg-light">
@@ -124,182 +127,165 @@
  </div>
  </div>
 
- <!-- Habitaciones disponibles (al final) -->
  <div class="col-12">
- <div class="d-flex justify-content-between align-items-center">
- <h5 class="mb-0">Habitaciones disponibles</h5>
- <button type="button" id="btnBuscarDisponibles" class="btn btn-outline-primary btn-sm">Buscar</button>
- </div>
- <small class="text-muted">Seleccione fechas y hotel para listar. Luego elija una tarjeta.</small>
- <div id="gridDisponibles" class="row mt-3 g-3"></div>
- </div>
-
- <div class="col-12">
- <button type="submit" class="btn btn-success">Pagar y confirmar</button>
- <a class="btn btn-secondary" href="@Url.Action("Search")">Volver</a>
+ <button type="submit" class="btn btn-primary">Realizar reserva</button>
  </div>
  </form>
 </div>
 @section Scripts{
  <partial name="_ValidationScriptsPartial" />
  <script>
- // control de fechas mínimas + corrección inicial
- const inEl = document.getElementById('FechaEntrada');
- const outEl = document.getElementById('FechaSalida');
- function ensureSalidaAfterEntrada(){
- const d = new Date(inEl.value);
- if (!isNaN(d)){
- const min = new Date(d); min.setDate(min.getDate()+1);
- const minStr = min.toISOString().slice(0,10);
- outEl.min = minStr;
- if (!outEl.value || new Date(outEl.value) <= d){ outEl.value = minStr; }
- }
- }
- if (inEl && outEl){ ensureSalidaAfterEntrada(); inEl.addEventListener('change', ensureSalidaAfterEntrada); }
- 
- const btnBuscar = document.getElementById('btnBuscarDisponibles');
- const grid = document.getElementById('gridDisponibles');
- const hotelSel = document.getElementById('HotelId');
- const habInput = document.getElementById('HabitacionId');
- const roomNumber = document.getElementById('RoomNumberSelected');
- const amenWifi = document.getElementById('AmenWifi');
- const amenJacuzzi = document.getElementById('AmenJacuzzi');
- const amenNetflix = document.getElementById('AmenNetflix');
- const serviceChecks = {
- Desayuno: document.getElementById('Desayuno'),
- Spa: document.getElementById('Spa'),
- Estacionamiento: document.getElementById('Estacionamiento'),
- LateCheckout: document.getElementById('LateCheckout')
- };
- let lastData = [];
- const hotelServiceCache = new Map(); // hotelId -> Map(nombre, precio)
+ const docInput = document.getElementById('Documento');
+ const telInput = document.getElementById('Telefono');
+ if(docInput){ docInput.addEventListener('input', ()=>{ docInput.value = docInput.value.replace(/[^\d]/g,'').slice(0,8); }); }
+ if(telInput){ telInput.addEventListener('input', ()=>{ telInput.value = telInput.value.replace(/[^\d]/g,'').slice(0,9); }); }
 
- function toCurrency(v){
- return new Intl.NumberFormat(undefined,{ style:'currency', currency:'USD'}).format(v||0);
- }
+ const fHotel = document.getElementById('QHotel');
+ const fTipo = document.getElementById('QTipo');
+ const fDisp = document.getElementById('QDisponibles');
+ const fOcup = document.getElementById('QOcupadas');
+ const fCapMin = document.getElementById('QCapacidadMin');
+ const habHidden = document.getElementById('HabitacionId');
+ const fEntrada = document.getElementById('FechaEntrada');
+ const fSalida = document.getElementById('FechaSalida');
+
+ const sumNoches = document.getElementById('sumNoches');
+ const sumHabitacion = document.getElementById('sumHabitacion');
+ const sumPriceNight = document.getElementById('sumPriceNight');
+ const sumSubHab = document.getElementById('sumSubHab');
+ const sumSubServ = document.getElementById('sumSubServ');
+ const sumTotal = document.getElementById('sumTotal');
+
+ const chkDes = document.getElementById('Desayuno');
+ const chkSpa = document.getElementById('Spa');
+ const chkEst = document.getElementById('Estacionamiento');
+ const chkLate = document.getElementById('LateCheckout');
+
+ const priceMap = { '1':35, '2':56, '3':84 }; // Simple, Doble, Suite en USD
+ const tipoText = { '1': 'Simple', '2': 'Doble', '3': 'Suite' };
+ const serviciosPrices = { Desayuno:15, Spa:50, Estacionamiento:10, LateCheckout:25 };
+
  function calcNoches(){
- const fe = new Date(document.getElementById('FechaEntrada').value);
- const fs = new Date(document.getElementById('FechaSalida').value);
- if (isNaN(fe) || isNaN(fs)) return0;
- const diff = Math.round((fs - fe) / (1000*60*60*24));
- return Math.max(0, diff);
- }
- async function getHotelServicesPrices(hid){
- if (!hid) return new Map();
- if (hotelServiceCache.has(hid)) return hotelServiceCache.get(hid);
- try{
- const res = await fetch(`@Url.Action("ServiciosHotel","Habitaciones")?hotelId=${hid}`);
- if(!res.ok) return new Map();
- const data = await res.json();
- const map = new Map(data.map(s=>[String(s.nombre).toLowerCase(), Number(s.precio)]));
- hotelServiceCache.set(hid, map);
- return map;
- }catch{ return new Map(); }
- }
- function getSelectedHotelId(){
- const sel = lastData.find(x=>String(x.id)===String(habInput.value));
- if (sel) return String(sel.hotelId);
- return String(hotelSel.value||'');
- }
- async function updateSummary(){
- const noches = calcNoches();
- const sel = lastData.find(x=>String(x.id)===String(habInput.value));
- document.getElementById('sumNoches').textContent = noches;
- document.getElementById('sumHabitacion').textContent = roomNumber.value || '-';
- const subHab = sel ? Number(sel.precioTotal) :0;
- document.getElementById('sumSubHab').textContent = toCurrency(subHab);
- // servicios: usar precios de la tarjeta si hay selección; si no, usar los del hotel
- let subServ =0;
- let priceMap = new Map((sel?.servicios||[]).map(s=>[String(s.nombre).toLowerCase(), Number(s.precio)]));
- if (!sel) priceMap = await getHotelServicesPrices(getSelectedHotelId());
- if (serviceChecks.Desayuno.checked && priceMap.has('desayuno')) subServ += priceMap.get('desayuno');
- if (serviceChecks.Spa.checked && priceMap.has('spa')) subServ += priceMap.get('spa');
- if (serviceChecks.Estacionamiento.checked && priceMap.has('estacionamiento')) subServ += priceMap.get('estacionamiento');
- if (serviceChecks.LateCheckout.checked && priceMap.has('latecheckout')) subServ += priceMap.get('latecheckout');
- document.getElementById('sumSubServ').textContent = toCurrency(subServ);
- document.getElementById('sumDesc').textContent = '-';
- document.getElementById('sumTotal').textContent = toCurrency(subHab + subServ);
+ try {
+ const d1 = new Date(fEntrada.value);
+ const d2 = new Date(fSalida.value);
+ if(!fEntrada.value || !fSalida.value) return0;
+ const ms = d2 - d1;
+ const nights = Math.max(0, Math.ceil(ms / (1000*60*60*24)));
+ return nights;
+ } catch { return0; }
  }
 
- function renderCards(data){
- lastData = data || [];
- grid.innerHTML = '';
- if (!data || data.length ===0){
- grid.innerHTML = '<div class="col-12"><div class="alert alert-warning">No hay habitaciones disponibles.</div></div>';
- updateSummary();
- return;
+ function formatUSD(v){ return `$${(v||0).toFixed(2)}`; }
+
+ function serviciosSubtotal(){
+ let total =0;
+ if(chkDes && chkDes.checked) total += serviciosPrices.Desayuno;
+ if(chkSpa && chkSpa.checked) total += serviciosPrices.Spa;
+ if(chkEst && chkEst.checked) total += serviciosPrices.Estacionamiento;
+ if(chkLate && chkLate.checked) total += serviciosPrices.LateCheckout;
+ return total;
  }
- data.forEach(item => {
- const col = document.createElement('div');
- col.className = 'col-md-4';
- col.innerHTML = `
- <div class="card h-100 selectable-room" data-id="${item.id}" data-numero="${item.numero}" data-hotel-id="${item.hotelId}" data-wifi="${item.hasWifi}" data-jacuzzi="${item.hasJacuzzi}">
- <div class="card-body">
- <h5 class="card-title">Hab. ${item.numero} - ${item.tipo}</h5>
- <h6 class="card-subtitle mb-2 text-muted">${item.hotel}</h6>
- <p class="card-text mb-1">Precio promedio: $${item.precioPromedio}</p>
- </div>
- </div>`;
- grid.appendChild(col);
+
+ function updateSummary(){
+ const tipo = fTipo.value || '';
+ const nights = calcNoches();
+ const priceNight = priceMap[tipo] ||0;
+ const subHab = priceNight * nights;
+ const subServ = serviciosSubtotal();
+ sumNoches.textContent = nights;
+ sumHabitacion.textContent = tipo ? `${tipoText[tipo]}` : '-';
+ sumPriceNight.textContent = formatUSD(priceNight);
+ sumSubHab.textContent = formatUSD(subHab);
+ sumSubServ.textContent = formatUSD(subServ);
+ sumTotal.textContent = formatUSD(subHab + subServ);
+ }
+
+ fHotel.addEventListener('change', ()=>{
+ fDisp.innerHTML='<option>-- cargando --</option>';
+ fOcup.innerHTML='<option>(sin datos)</option>';
+ const hid = fHotel.value; const tipo = fTipo.value;
+ if(!hid || !tipo){ fDisp.innerHTML='<option value="">-- seleccione hotel y tipo --</option>'; updateSummary(); return; }
+ const url = `@Url.Action("QuickNumbersHistory")?hotelId=${hid}&tipo=${tipo}`;
+ fetch(url)
+ .then(res=>{ if(!res.ok) throw'Error'; return res.json(); })
+ .then(data=>{
+ fDisp.innerHTML='';
+ const disp = (data.disponibles||[]).filter(x=> !fCapMin.value || x.capacidad >= parseInt(fCapMin.value));
+ if(disp.length===0){ fDisp.innerHTML='<option value="">(no disponibles)</option>'; }
+ else{
+ fDisp.insertAdjacentHTML('beforeend','<option value="">-- seleccione --</option>');
+ disp.forEach(x=>{ fDisp.insertAdjacentHTML('beforeend',`<option value="${x.id}" data-num="${x.numero}" data-cap="${x.capacidad}">${x.numero} (cap:${x.capacidad})</option>`); });
+ }
+ fOcup.innerHTML='';
+ if(data.ocupadas && data.ocupadas.length){ data.ocupadas.forEach(n=> fOcup.insertAdjacentHTML('beforeend',`<option>${n}</option>`)); }
+ else fOcup.innerHTML='<option>(ninguna)</option>';
+ updateSummary();
+ })
+ .catch(err=>{ fDisp.innerHTML='<option>Error</option>'; });
  });
 
- document.querySelectorAll('.selectable-room').forEach(card => {
- card.addEventListener('click', async () => {
- document.querySelectorAll('.selectable-room').forEach(c=>c.classList.remove('border','border-primary'));
- card.classList.add('border','border-primary');
- const id = card.getAttribute('data-id');
- const numero = card.getAttribute('data-numero');
- const hid = card.getAttribute('data-hotel-id');
- const hasWifi = card.getAttribute('data-wifi') === 'true';
- const hasJacuzzi = card.getAttribute('data-jacuzzi') === 'true';
- habInput.value = id;
- roomNumber.value = numero;
- amenWifi.checked = hasWifi; amenWifi.disabled = !hasWifi;
- amenJacuzzi.checked = hasJacuzzi; amenJacuzzi.disabled = !hasJacuzzi;
- updateHotelServices(hid);
- await getHotelServicesPrices(hid); // precargar precios
+ fTipo.addEventListener('change', ()=>{
+ fDisp.innerHTML='<option>-- cargando --</option>';
+ fOcup.innerHTML='<option>(sin datos)</option>';
+ const hid = fHotel.value; const tipo = fTipo.value;
+ if(!hid || !tipo){ fDisp.innerHTML='<option value="">-- seleccione hotel y tipo --</option>'; updateSummary(); return; }
+ const url = `@Url.Action("QuickNumbersHistory")?hotelId=${hid}&tipo=${tipo}`;
+ fetch(url)
+ .then(res=>{ if(!res.ok) throw'Error'; return res.json(); })
+ .then(data=>{
+ fDisp.innerHTML='';
+ const disp = (data.disponibles||[]).filter(x=> !fCapMin.value || x.capacidad >= parseInt(fCapMin.value));
+ if(disp.length===0){ fDisp.innerHTML='<option value="">(no disponibles)</option>'; }
+ else{
+ fDisp.insertAdjacentHTML('beforeend','<option value="">-- seleccione --</option>');
+ disp.forEach(x=>{ fDisp.insertAdjacentHTML('beforeend',`<option value="${x.id}" data-num="${x.numero}" data-cap="${x.capacidad}">${x.numero} (cap:${x.capacidad})</option>`); });
+ }
+ fOcup.innerHTML='';
+ if(data.ocupadas && data.ocupadas.length){ data.ocupadas.forEach(n=> fOcup.insertAdjacentHTML('beforeend',`<option>${n}</option>`)); }
+ else fOcup.innerHTML='<option>(ninguna)</option>';
+ updateSummary();
+ })
+ .catch(err=>{ fDisp.innerHTML='<option>Error</option>'; });
+ });
+
+ fCapMin.addEventListener('input', ()=>{
+ fDisp.innerHTML='<option>-- cargando --</option>';
+ fOcup.innerHTML='<option>(sin datos)</option>';
+ const hid = fHotel.value; const tipo = fTipo.value;
+ if(!hid || !tipo){ fDisp.innerHTML='<option value="">-- seleccione hotel y tipo --</option>'; updateSummary(); return; }
+ const url = `@Url.Action("QuickNumbersHistory")?hotelId=${hid}&tipo=${tipo}`;
+ fetch(url)
+ .then(res=>{ if(!res.ok) throw'Error'; return res.json(); })
+ .then(data=>{
+ fDisp.innerHTML='';
+ const disp = (data.disponibles||[]).filter(x=> !fCapMin.value || x.capacidad >= parseInt(fCapMin.value));
+ if(disp.length===0){ fDisp.innerHTML='<option value="">(no disponibles)</option>'; }
+ else{
+ fDisp.insertAdjacentHTML('beforeend','<option value="">-- seleccione --</option>');
+ disp.forEach(x=>{ fDisp.insertAdjacentHTML('beforeend',`<option value="${x.id}" data-num="${x.numero}" data-cap="${x.capacidad}">${x.numero} (cap:${x.capacidad})</option>`); });
+ }
+ fOcup.innerHTML='';
+ if(data.ocupadas && data.ocupadas.length){ data.ocupadas.forEach(n=> fOcup.insertAdjacentHTML('beforeend',`<option>${n}</option>`)); }
+ else fOcup.innerHTML='<option>(ninguna)</option>';
+ updateSummary();
+ })
+ .catch(err=>{ fDisp.innerHTML='<option>Error</option>'; });
+ });
+
+ fDisp.addEventListener('change', ()=>{
+ const opt = fDisp.selectedOptions[0];
+ if(opt && opt.value){ habHidden.value = opt.value; }
  updateSummary();
  });
- });
+
+ fEntrada.addEventListener('change', updateSummary);
+ fSalida.addEventListener('change', updateSummary);
+ if(chkDes) chkDes.addEventListener('change', updateSummary);
+ if(chkSpa) chkSpa.addEventListener('change', updateSummary);
+ if(chkEst) chkEst.addEventListener('change', updateSummary);
+ if(chkLate) chkLate.addEventListener('change', updateSummary);
+
  updateSummary();
- }
-
- function updateHotelServices(hotelId){
- const found = lastData.find(x=>String(x.hotelId)===String(hotelId));
- const names = new Set((found?.servicios||[]).map(s=>String(s.nombre).toLowerCase()));
- const map = { Desayuno:'desayuno', Spa:'spa', Estacionamiento:'estacionamiento', LateCheckout:'latecheckout' };
- for (const k in serviceChecks){
- const enabled = names.has(map[k]);
- serviceChecks[k].disabled = !enabled && !hotelServiceCache.has(String(hotelId)); // si no hay tarjeta, activaremos luego si el hotel tiene
- if (!enabled && !hotelServiceCache.has(String(hotelId))) serviceChecks[k].checked = false;
- }
- }
-
- async function buscar(){
- const fe = document.getElementById('FechaEntrada').value;
- const fs = document.getElementById('FechaSalida').value;
- const h = hotelSel.value || '';
- if (!fe || !fs){
- grid.innerHTML = '<div class="col-12"><div class="alert alert-info">Seleccione fecha de entrada y salida.</div></div>';
- updateSummary();
- return;
- }
- if (new Date(fs) <= new Date(fe)) { ensureSalidaAfterEntrada(); }
- const url = `@Url.Action("GetDisponibles")?fechaEntrada=${fe}&fechaSalida=${fs}&hotelId=${h}`;
- const res = await fetch(url);
- if (!res.ok){ grid.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error obteniendo disponibilidad.</div></div>'; updateSummary(); return; }
- const data = await res.json();
- renderCards(data);
- await getHotelServicesPrices(String(h)); // precarga
- await updateSummary();
- }
-
- btnBuscar?.addEventListener('click', buscar);
- document.getElementById('FechaEntrada')?.addEventListener('change', ()=>{ buscar(); updateSummary();});
- document.getElementById('FechaSalida')?.addEventListener('change', ()=>{ buscar(); updateSummary();});
- hotelSel?.addEventListener('change', ()=>{ buscar(); updateSummary();});
- Object.values(serviceChecks).forEach(cb=> cb.addEventListener('change', ()=>{ updateSummary(); }));
- // carga inicial
- setTimeout(()=>{ buscar(); updateSummary(); },0);
  </script>
-}
+}}

@@ -1,10 +1,10 @@
 @using ReserHotel.Controllers
 @model IEnumerable<ReservaListItem>
 @{
- ViewData["Title"] = "Reservas";
+ ViewData["Title"] = "Mis Reservas";
 }
 <div class="container mt-4">
- <h2>Reservas</h2>
+ <h2>Mis Reservas</h2>
  <div class="mb-3 d-flex justify-content-end gap-2">
  <a class="btn btn-primary btn-sm" href="@Url.Action("Search")">Nueva Reserva</a>
  </div>
@@ -14,44 +14,77 @@
  <table class="table table-striped align-middle">
  <thead>
  <tr>
- <th>Nombre</th>
- <th>Número</th>
- <th>Piso</th>
- <th>Tipo</th>
- <th>Capacidad</th>
- <th>Amenidades</th>
- <th></th>
+ <th>N° Reserva</th>
+ <th>Huésped</th>
+ <th>Hotel</th>
+ <th>Habitación</th>
+ <th>Entrada</th>
+ <th>Salida</th>
+ <th>Noches</th>
+ <th>Total</th>
+ <th>Estado</th>
+ <th>Acciones</th>
  </tr>
  </thead>
  <tbody>
  @foreach (var r in Model)
  {
- var nombreHab = r.Habitacion?.RegistradoNombreCompleto ?? "";
  <tr>
- <td>@nombreHab</td>
- <td>@r.Habitacion?.Numero</td>
- <td>@r.Habitacion?.Piso</td>
- <td>@r.Habitacion?.Tipo</td>
- <td>@r.Habitacion?.Capacidad</td>
- <td>@r.Habitacion?.Amenidades</td>
- <td class="text-end">
- <!-- Acciones de la reserva -->
- <form asp-action="Cancel" method="post" asp-route-id="@r.Reserva.Id" class="d-inline" onsubmit="return confirm('Cancelar esta reserva?');">
- <button type="submit" class="btn btn-sm btn-outline-danger" @(r.Reserva.Estado==HotelSystem.Domain.Entities.EstadoReserva.Cancelada?"disabled":"")>Cancelar</button>
- </form>
- <form asp-action="CheckIn" method="post" asp-route-id="@r.Reserva.Id" class="d-inline" onsubmit="return confirm('Confirmar check-in?');">
- <button type="submit" class="btn btn-sm btn-outline-success" @(r.Reserva.Estado!=HotelSystem.Domain.Entities.EstadoReserva.Pendiente?"disabled":"")>Check-In</button>
- </form>
- <form asp-action="CheckOut" method="post" asp-route-id="@r.Reserva.Id" class="d-inline" onsubmit="return confirm('Procesar check-out?');">
- <button type="submit" class="btn btn-sm btn-outline-primary" @(r.Reserva.Estado!=HotelSystem.Domain.Entities.EstadoReserva.Confirmada?"disabled":"")>Check-Out</button>
- </form>
- <!-- Acciones sobre la habitación vinculada -->
- @if (r.Habitacion is not null)
+ <td>@r.Reserva.NumeroReserva</td>
+ <td>
+ <strong>@r.Huesped?.NombreCompleto</strong><br/>
+ <small class="text-muted">@r.Huesped?.Documento</small>
+ </td>
+ <td>@r.Hotel?.Nombre</td>
+ <td>
+ #@r.Habitacion?.Numero<br/>
+ <small class="text-muted">@r.Habitacion?.Tipo - Piso @r.Habitacion?.Piso</small>
+ </td>
+ <td>@r.Reserva.FechaEntrada.ToString("dd/MM/yyyy")</td>
+ <td>@r.Reserva.FechaSalida.ToString("dd/MM/yyyy")</td>
+ <td>@r.Noches</td>
+ <td>@r.Total.ToString("C")</td>
+ <td>
+ @{
+ var badgeClass = r.Reserva.Estado switch
  {
- <a class="btn btn-sm btn-outline-info" href="@Url.Action("Details", "Habitaciones", new { id = r.Habitacion.Id })">Detalles</a>
- <a class="btn btn-sm btn-outline-warning" href="@Url.Action("Edit", "Habitaciones", new { id = r.Habitacion.Id })">Editar</a>
- <a class="btn btn-sm btn-outline-danger" href="@Url.Action("Delete", "Habitaciones", new { id = r.Habitacion.Id })">Eliminar</a>
+ HotelSystem.Domain.Entities.EstadoReserva.Pendiente => "badge bg-warning text-dark",
+ HotelSystem.Domain.Entities.EstadoReserva.Confirmada => "badge bg-success",
+ HotelSystem.Domain.Entities.EstadoReserva.Completada => "badge bg-info",
+ HotelSystem.Domain.Entities.EstadoReserva.Cancelada => "badge bg-danger",
+ _ => "badge bg-secondary"
+ };
  }
+ <span class="@badgeClass">@r.Reserva.Estado</span>
+ </td>
+ <td class="text-end">
+ <div class="btn-group-vertical btn-group-sm" role="group">
+ <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("Details", new { id = r.Reserva.Id })">Detalles</a>
+ <form asp-action="Cancel" method="post" asp-route-id="@r.Reserva.Id" class="d-inline" onsubmit="return confirm('¿Cancelar esta reserva?');">
+ @Html.AntiForgeryToken()
+ <button type="submit" class="btn btn-sm btn-outline-danger w-100" @(r.Reserva.Estado==HotelSystem.Domain.Entities.EstadoReserva.Cancelada?"disabled":"")>Cancelar</button>
+ </form>
+ <form asp-action="CheckIn" method="post" asp-route-id="@r.Reserva.Id" class="d-inline" onsubmit="return confirm('¿Confirmar check-in?');">
+ @Html.AntiForgeryToken()
+ <button type="submit" class="btn btn-sm btn-outline-success w-100" @(r.Reserva.Estado!=HotelSystem.Domain.Entities.EstadoReserva.Pendiente?"disabled":"")>Check-In</button>
+ </form>
+ <form asp-action="CheckOut" method="post" asp-route-id="@r.Reserva.Id" class="d-inline" onsubmit="return confirm('¿Procesar check-out?');">
+ @Html.AntiForgeryToken()
+ <button type="submit" class="btn btn-sm btn-outline-primary w-100" @(r.Reserva.Estado!=HotelSystem.Domain.Entities.EstadoReserva.Confirmada?"disabled":"")>Check-Out</button>
+ </form>
+ <form asp-action="Delete" method="post" asp-route-id="@r.Reserva.Id" class="d-inline" onsubmit="return confirm('¿Eliminar esta reserva permanentemente?');">
+ @Html.AntiForgeryToken()
+ <button type="submit" class="btn btn-sm btn-danger w-100">Eliminar</button>
+ </form>
+ </div>
+ </td>
+ </tr>
+ }
+ @if (!Model.Any())
+ {
+ <tr>
+ <td colspan="10" class="text-center text-muted py-4">
+ <i class="bi bi-calendar-x"></i> No hay reservas registradas
  </td>
  </tr>
  }

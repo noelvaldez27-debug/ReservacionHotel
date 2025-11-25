@@ -3,7 +3,7 @@
 @{
  ViewData["Title"] = "Nueva Habitación";
 }
-<div class="container mt-4">
+<div class="container mt-4 habitacion-form">
  <h2>Nueva Habitación</h2>
  <form asp-action="Create" method="post" class="row g-3" id="FormCrearHab">
  <!-- hidden fields to persist quote -->
@@ -51,7 +51,7 @@
  </div>
  <div class="col-md-4">
  <label asp-for="RegistradoDni" class="form-label"></label>
- <input asp-for="RegistradoDni" class="form-control" />
+ <input asp-for="RegistradoDni" class="form-control" inputmode="numeric" pattern="\d{1,8}" maxlength="8" />
  <span asp-validation-for="RegistradoDni" class="text-danger"></span>
  </div>
  </div>
@@ -64,7 +64,7 @@
  </div>
 
  <!-- Cotización en vivo para referencia del encargado -->
- <div class="col-12"><h5>Cotización (referencia)</h5></div>
+ <div class="col-12"><h5 class="mt-3">Cotización (referencia)</h5></div>
  <div class="col-md-3">
  <label class="form-label">Entrada</label>
  <input id="CotzEntrada" type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
@@ -251,5 +251,12 @@
  form.addEventListener('submit', (e)=>{ actualizarCotizacion(); });
  // inicial
  cargarServicios(); actualizarCotizacion(); cargarNumeros();
+ // Añadir recorte automático a8 dígitos para DNI
+ const dniInput = document.getElementById('RegistradoDni');
+ if(dniInput){
+ dniInput.addEventListener('input', ()=>{
+ dniInput.value = dniInput.value.replace(/[^\d]/g,'').slice(0,8);
+ });
+ }
  </script>
 }

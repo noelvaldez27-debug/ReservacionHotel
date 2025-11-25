@@ -1,0 +1,19 @@
+/* Mejoras visuales para formularios de habitaciones */
+.habitacion-form h2 {
+ font-weight:600;
+ background: linear-gradient(90deg,#ffb347,#ffcc33);
+ -webkit-background-clip:text;
+ color:transparent;
+}
+.card-hab-gallery {
+ border:0;
+ box-shadow:04px12px rgba(0,0,0,.15);
+ transition:.3s;
+}
+.card-hab-gallery:hover { transform:translateY(-4px); box-shadow:06px18px rgba(0,0,0,.25); }
+.gallery-strip img { height:120px; object-fit:cover; border-radius:8px; }
+.select-highlight { border:2px solid #ffb347 !important; }
+#ResumenCotizacion { background: linear-gradient(135deg,#f9f9f9,#fffbe6); }
+.badge-tipo-simple { background:#ffb347; }
+.badge-tipo-doble { background:#4dabf7; }
+.badge-tipo-suite { background:#9b59b6; }

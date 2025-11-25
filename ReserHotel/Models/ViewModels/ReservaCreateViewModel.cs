@@ -7,14 +7,12 @@ public class ReservaCreateViewModel
 {
  // Datos del huésped
  [Required]
+ [RegularExpression(@"^\d{8}$", ErrorMessage = "Documento debe tener exactamente 8 dígitos.")]
  public string Documento { get; set; } = string.Empty;
  [Required]
  public string NombreCompleto { get; set; } = string.Empty;
- [EmailAddress]
- public string? Email { get; set; }
+ [RegularExpression(@"^\d{9}$", ErrorMessage = "Teléfono debe tener exactamente 9 dígitos.")]
  public string? Telefono { get; set; }
- [Required]
- public string Pais { get; set; } = string.Empty;
 
  // Datos de la reserva
  [Required]

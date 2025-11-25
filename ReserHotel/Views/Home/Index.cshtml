@@ -1,8 +1,52 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Inicio";
 }
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="hero-mh mb-5">
+    <div class="hero-overlay"></div>
+    <div class="hero-content container">
+        <h1>Bienvenido a MiltonHouse</h1>
+        <p class="lead">Gestione habitaciones y reservas de forma rápida.</p>
+        <a asp-controller="Reservas" asp-action="Create" class="btn btn-primary btn-lg">Nueva reserva</a>
+    </div>
+</div>
+<div class="container quick-menu">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card quick-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Crear Habitación</h5>
+                    <p class="card-text">Registrar una nueva habitación con sus detalles y amenidades.</p>
+                    <a asp-controller="Habitaciones" asp-action="Create" class="btn btn-outline-primary">Ir</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card quick-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Registro de Habitaciones</h5>
+                    <p class="card-text">Listado completo de habitaciones creadas. Editar, ver detalles o eliminar.</p>
+                    <a asp-controller="Habitaciones" asp-action="Index" class="btn btn-outline-secondary">Ver listado</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card quick-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Realizar Reserva</h5>
+                    <p class="card-text">Crear una nueva reserva seleccionando fechas y servicios.</p>
+                    <a asp-controller="Reservas" asp-action="Create" class="btn btn-outline-success">Reservar</a>
+                </div>
+            </div>
+        </div>
+        <!-- Nueva tarjeta: Mis Reservas -->
+        <div class="col-md-4">
+            <div class="card quick-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Mis Reservas</h5>
+                    <p class="card-text">Consultar historial de reservas con opciones de detalles, cancelar o eliminar.</p>
+                    <a asp-controller="Reservas" asp-action="Index" class="btn btn-outline-info">Ver reservas</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

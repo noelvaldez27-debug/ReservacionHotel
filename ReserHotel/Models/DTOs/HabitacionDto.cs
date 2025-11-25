@@ -35,6 +35,8 @@ public class HabitacionDto
  public string? RegistradoNombreCompleto { get; set; }
 
  [Display(Name = "DNI")]
- [StringLength(20)]
+ // Máximo8 dígitos numéricos
+ [StringLength(8, ErrorMessage = "Máximo8 dídigos")]
+ [RegularExpression(@"^\d{1,8}$", ErrorMessage = "El DNI debe contener solo números (máx.8 dígitos)")]
  public string? RegistradoDni { get; set; }
 }

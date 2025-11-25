@@ -1,0 +1,8 @@
+/* Estilos página de inicio MiltonHouse */
+.hero-mh { position:relative; min-height:60vh; background:url('/img/hab/simple-new.jpg') center/cover no-repeat; display:flex; align-items:center; }
+.hero-overlay { position:absolute; inset:0; background:rgba(0,0,0,.55); }
+.hero-content { position:relative; z-index:2; color:#fff; padding:2rem3rem; }
+.hero-content h1 { font-size:3rem; font-weight:700; }
+.quick-menu { margin-top:-3rem; }
+.quick-card { transition:.3s; }
+.quick-card:hover { transform:translateY(-6px); box-shadow:010px24px rgba(0,0,0,.25); }

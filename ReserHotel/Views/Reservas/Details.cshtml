@@ -1,0 +1,37 @@
+@using ReserHotel.Controllers
+@model ReservaListItem
+@{
+ ViewData["Title"] = "Detalle de Reserva";
+}
+<div class="container mt-4">
+ <h2>Detalle de Reserva</h2>
+ <div class="card">
+ <div class="card-body">
+ <div class="row">
+ <div class="col-md-6">
+ <p><strong>Número:</strong> @Model.Reserva.NumeroReserva</p>
+ <p><strong>Estado:</strong> @Model.Reserva.Estado</p>
+ <p><strong>Fecha entrada:</strong> @Model.Reserva.FechaEntrada.ToString("dd/MM/yyyy")</p>
+ <p><strong>Fecha salida:</strong> @Model.Reserva.FechaSalida.ToString("dd/MM/yyyy")</p>
+ <p><strong>Noches:</strong> @Model.Noches</p>
+ <p><strong>Total:</strong> @Model.Total.ToString("C")</p>
+ </div>
+ <div class="col-md-6">
+ <p><strong>Huésped:</strong> @Model.Huesped?.NombreCompleto (@Model.Huesped?.Documento)</p>
+ <p><strong>Hotel:</strong> @Model.Hotel?.Nombre</p>
+ <p><strong>Habitación:</strong> @Model.Habitacion?.Numero - @Model.Habitacion?.Tipo</p>
+ <p><strong>Amenidades:</strong> @Model.Habitacion?.Amenidades</p>
+ </div>
+ </div>
+ <div class="mt-3 d-flex gap-2">
+ <a asp-action="Index" class="btn btn-secondary">Volver</a>
+ <form asp-action="Cancel" method="post" asp-route-id="@Model.Reserva.Id" onsubmit="return confirm('Cancelar esta reserva?');">
+ <button type="submit" class="btn btn-outline-danger">Cancelar</button>
+ </form>
+ <form asp-action="Delete" method="post" asp-route-id="@Model.Reserva.Id" onsubmit="return confirm('Eliminar esta reserva permanentemente?');">
+ <button type="submit" class="btn btn-danger">Eliminar</button>
+ </form>
+ </div>
+ </div>
+ </div>
+</div>
